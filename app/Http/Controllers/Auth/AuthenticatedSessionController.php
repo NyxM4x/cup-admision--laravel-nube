@@ -2,11 +2,12 @@
 
 namespace App\Http\Controllers\Auth;
 
+use App\Domain\Seguridad\UseCases\AutenticarUsuarioUseCase;
+use App\Domain\Seguridad\UseCases\CerrarSesionUseCase;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\LoginRequest;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\View\View;
 
 class AuthenticatedSessionController extends Controller
@@ -21,26 +22,31 @@ class AuthenticatedSessionController extends Controller
 
     /**
      * Handle an incoming authentication request.
+     * Solo delega al caso de uso (CU01).
      */
     public function store(LoginRequest $request): RedirectResponse
     {
-        $request->authenticate();
+        $useCase = new AutenticarUsuarioUseCase();
+        $resultado = $useCase->ejecutar(
+            $request->only('email', 'password'),
+            $request->boolean('remember')
+        );
 
-        $request->session()->regenerate();
+        if (! $resultado['exito']) {
+            return back()->withErrors(['email' => $resultado['mensaje']])->onlyInput('email');
+        }
 
-        return redirect()->intended(route('dashboard', absolute: false));
+        return redirect()->intended($resultado['redirect']);
     }
 
     /**
      * Destroy an authenticated session.
+     * Solo delega al caso de uso (CU02).
      */
     public function destroy(Request $request): RedirectResponse
     {
-        Auth::guard('web')->logout();
-
-        $request->session()->invalidate();
-
-        $request->session()->regenerateToken();
+        $useCase = new CerrarSesionUseCase();
+        $useCase->ejecutar();
 
         return redirect('/');
     }
