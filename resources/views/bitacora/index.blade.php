@@ -55,7 +55,7 @@
                     </div>
                     <div>
                         <label class="block text-sm text-gray-600 mb-1">Usuario</label>
-                        <select name="user_id" class="border-gray-300 rounded-md shadow-sm w-full">
+                        <select name="user_id" onchange="this.form.submit()" class="border-gray-300 rounded-md shadow-sm w-full">
                             <option value="">Todos los usuarios</option>
                             @foreach ($opciones['usuarios'] as $u)
                                 <option value="{{ $u->id }}" @selected(($filtros['user_id'] ?? '') == $u->id)>{{ $u->name }} ({{ $u->email }})</option>
@@ -64,7 +64,7 @@
                     </div>
                     <div>
                         <label class="block text-sm text-gray-600 mb-1">Módulo</label>
-                        <select name="modulo" class="border-gray-300 rounded-md shadow-sm w-full">
+                        <select name="modulo" onchange="this.form.submit()" class="border-gray-300 rounded-md shadow-sm w-full">
                             <option value="">Todos los módulos</option>
                             @foreach ($opciones['modulos'] as $mod)
                                 <option value="{{ $mod }}" @selected(($filtros['modulo'] ?? '') === $mod)>{{ $mod }}</option>
@@ -73,7 +73,7 @@
                     </div>
                     <div>
                         <label class="block text-sm text-gray-600 mb-1">Acción</label>
-                        <select name="accion" class="border-gray-300 rounded-md shadow-sm w-full">
+                        <select name="accion" onchange="this.form.submit()" class="border-gray-300 rounded-md shadow-sm w-full">
                             <option value="">Todas las acciones</option>
                             @foreach ($opciones['acciones'] as $acc)
                                 <option value="{{ $acc }}" @selected(($filtros['accion'] ?? '') === $acc)>{{ $acc }}</option>

@@ -82,6 +82,26 @@ Route::prefix('seguridad')->middleware('auth')->group(function () {
         ->middleware('permiso:permisos.gestionar')->name('permisos.matriz');
 });
 
+// CU10 - Gestionar aulas (GestionGlobal)
+use App\Http\Controllers\GestionGlobal\AulaController;
+
+Route::prefix('gestion-global')->middleware('auth')->group(function () {
+    Route::get('/aulas', [AulaController::class, 'index'])
+        ->middleware('permiso:aulas.ver')->name('aulas.index');
+    Route::get('/aulas/crear', [AulaController::class, 'create'])
+        ->middleware('permiso:aulas.crear')->name('aulas.create');
+    Route::post('/aulas', [AulaController::class, 'store'])
+        ->middleware('permiso:aulas.crear')->name('aulas.store');
+    Route::get('/aulas/{aula}/editar', [AulaController::class, 'edit'])
+        ->middleware('permiso:aulas.editar')->name('aulas.edit');
+    Route::put('/aulas/{aula}', [AulaController::class, 'update'])
+        ->middleware('permiso:aulas.editar')->name('aulas.update');
+    Route::delete('/aulas/{aula}', [AulaController::class, 'destroy'])
+        ->middleware('permiso:aulas.eliminar')->name('aulas.destroy');
+    Route::post('/aulas/{aula}/reactivar', [AulaController::class, 'reactivar'])
+        ->middleware('permiso:aulas.editar')->name('aulas.reactivar');
+});
+
 // CU06 - Visualizar bitácora (READ-ONLY, inmutable: solo GET)
 use App\Http\Controllers\Bitacora\BitacoraController;
 

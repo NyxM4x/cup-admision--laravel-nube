@@ -15,6 +15,11 @@
                     <x-nav-link :href="route('dashboard')" :active="request()->routeIs('dashboard')">
                         {{ __('Dashboard') }}
                     </x-nav-link>
+                    @if (Auth::user() && Auth::user()->tienePermiso('aulas.ver'))
+                        <x-nav-link :href="route('aulas.index')" :active="request()->routeIs('aulas.*')">
+                            Aulas
+                        </x-nav-link>
+                    @endif
                     @if (Auth::user() && Auth::user()->tienePermiso('bitacora.ver'))
                         <x-nav-link :href="route('bitacora.index')" :active="request()->routeIs('bitacora.*')">
                             Bitácora
@@ -75,6 +80,11 @@
             <x-responsive-nav-link :href="route('dashboard')" :active="request()->routeIs('dashboard')">
                 {{ __('Dashboard') }}
             </x-responsive-nav-link>
+            @if (Auth::user() && Auth::user()->tienePermiso('aulas.ver'))
+                <x-responsive-nav-link :href="route('aulas.index')" :active="request()->routeIs('aulas.*')">
+                    Aulas
+                </x-responsive-nav-link>
+            @endif
             @if (Auth::user() && Auth::user()->tienePermiso('bitacora.ver'))
                 <x-responsive-nav-link :href="route('bitacora.index')" :active="request()->routeIs('bitacora.*')">
                     Bitácora
