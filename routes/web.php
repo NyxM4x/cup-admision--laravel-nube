@@ -7,9 +7,10 @@ Route::get('/', function () {
     return view('welcome');
 });
 
+// ✅ sin login por ahora
 Route::get('/dashboard', function () {
     return view('dashboard');
-})->middleware(['auth', 'verified'])->name('dashboard');
+})->name('dashboard');
 
 Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
@@ -41,3 +42,15 @@ use App\Http\Controllers\DocenteController;
 
 Route::resource('docentes', DocenteController::class);
 Route::post('docentes/{docente}/reactivar', [DocenteController::class, 'reactivar'])->name('docentes.reactivar');
+
+use App\Http\Controllers\PostulanteController;
+
+Route::resource('postulantes', PostulanteController::class);
+
+use App\Http\Controllers\DocumentoPostulanteController;
+
+Route::get('documentos',                          [DocumentoPostulanteController::class, 'index'])->name('documentos.index');
+Route::get('documentos/{inscripcion}',            [DocumentoPostulanteController::class, 'show'])->name('documentos.show');
+Route::post('documentos/{inscripcion}',           [DocumentoPostulanteController::class, 'store'])->name('documentos.store');
+Route::post('documentos/aprobar/{documento}',     [DocumentoPostulanteController::class, 'aprobar'])->name('documentos.aprobar');
+Route::post('documentos/rechazar/{documento}',    [DocumentoPostulanteController::class, 'rechazar'])->name('documentos.rechazar');
