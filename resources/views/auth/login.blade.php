@@ -1,4 +1,11 @@
 <x-guest-layout>
+    <!-- Encabezado CUP -->
+    <div class="mb-6 text-center">
+        <h1 class="text-xl font-bold text-gray-800">Sistema de Admisión CUP - FICCT UAGRM</h1>
+        <p class="text-sm text-gray-600 mt-1">Curso Preuniversitario</p>
+        <h2 class="text-base font-semibold text-gray-700 mt-3">Iniciar Sesión</h2>
+    </div>
+
     <!-- Session Status -->
     <x-auth-session-status class="mb-4" :status="session('status')" />
 
