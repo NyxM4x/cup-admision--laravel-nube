@@ -1,4 +1,6 @@
-<!DOCTYPE html>
+@extends('layouts.base')
+@section('titulo', 'Periodos')
+@section('contenido')
 <html lang="es">
 <head>
     <meta charset="UTF-8">
@@ -81,5 +83,4 @@
         </div>
     </div>
 </div>
-</body>
-</html>
+@endsection
