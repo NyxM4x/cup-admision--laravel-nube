@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Domain\Bitacora\Services\BitacoraLogger;
 use App\Models\Postulante;
 use App\Models\Persona;
 use App\Models\Inscripcion;
@@ -111,6 +112,12 @@ class PostulanteController extends Controller
         // 5. Actualizar estado del postulante a inscrito
         $postulante->update(['estado' => 'inscrito']);
 
+        BitacoraLogger::registrar(
+            'REGISTRAR',
+            'Postulantes',
+            'Postulante registrado: '.$persona->nombre.' CI='.$persona->ci.' ID='.$postulante->id
+        );
+
         return redirect()->route('postulantes.index')
             ->with('success', "Postulante '{$persona->nombre}' registrado e inscrito correctamente.");
     }
@@ -204,6 +211,12 @@ class PostulanteController extends Controller
                 }
             }
         }
+
+        BitacoraLogger::registrar(
+            'EDITAR',
+            'Postulantes',
+            'Postulante editado: '.$postulante->persona->nombre.' ID='.$postulante->id
+        );
 
         return redirect()->route('postulantes.index')
             ->with('success', "Postulante '{$postulante->persona->nombre}' actualizado correctamente.");

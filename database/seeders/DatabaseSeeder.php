@@ -12,7 +12,6 @@ class DatabaseSeeder extends Seeder
     public function run(): void
     {
         // ══════════════════════════════════════
-<<<<<<< HEAD
         // SEEDERS DE ARIANY
         // ══════════════════════════════════════
         $this->call([
@@ -33,20 +32,6 @@ class DatabaseSeeder extends Seeder
         ]);
 
         // ══════════════════════════════════════
-=======
-        // 1. USUARIO ADMINISTRADOR
-        // ══════════════════════════════════════
-        DB::table('users')->insert([
-            'name'              => 'Administrador CUP',
-            'email'             => 'admin@ficct.uagrm.edu.bo',
-            'password'          => Hash::make('admin1234'),
-            'email_verified_at' => now(),
-            'created_at'        => now(),
-            'updated_at'        => now(),
-        ]);
-
-        // ══════════════════════════════════════
->>>>>>> 8ae6c2cf1aebee465d2464e1931cebf1c097d218
         // 2. PERIODOS
         // ══════════════════════════════════════
         DB::table('periodos')->insert([

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Domain\Bitacora\Services\BitacoraLogger;
 use App\Models\DocumentoPostulante;
 use App\Models\Inscripcion;
 use App\Models\Requisito;
@@ -72,68 +73,102 @@ class DocumentoPostulanteController extends Controller
 
     // Subir un documento para un requisito específico
     public function store(Request $request, Inscripcion $inscripcion)
-{
-    $requisito = Requisito::findOrFail($request->requisito_id);
+    {
+        $requisito = Requisito::findOrFail($request->requisito_id);
 
-    // Construir mimes correctamente — Laravel acepta: pdf,jpg,jpeg,png
-    $formatosArray = array_map('trim', explode(',', strtolower($requisito->formato_aceptado)));
-    $mimes = [];
-    foreach ($formatosArray as $f) {
-        if ($f === 'jpg') {
-            $mimes[] = 'jpg';
-            $mimes[] = 'jpeg';
-        } else {
-            $mimes[] = $f;
+        // Construir mimes correctamente — Laravel acepta: pdf,jpg,jpeg,png
+        $formatosArray = array_map('trim', explode(',', strtolower($requisito->formato_aceptado)));
+        $mimes = [];
+        foreach ($formatosArray as $f) {
+            if ($f === 'jpg') {
+                $mimes[] = 'jpg';
+                $mimes[] = 'jpeg';
+            } else {
+                $mimes[] = $f;
+            }
+        }
+        $formatosMimes = implode(',', $mimes);
+        $maxKb = $requisito->tamanio_max_kb;
+
+        $request->validate([
+            'requisito_id' => 'required|exists:requisitos,id',
+            'archivo'      => "required|file|mimes:{$formatosMimes}|max:{$maxKb}",
+        ], [
+            'archivo.mimes' => "El archivo debe ser de tipo: {$requisito->formato_aceptado}",
+            'archivo.max'   => "El archivo no debe superar " . ($maxKb / 1024) . " MB.",
+        ]);
+
+        try {
+            $inscripcion->load('postulante.persona');
+
+            // Si ya existe un documento para este requisito, eliminar el archivo anterior
+            $docExistente = DocumentoPostulante::where('inscripcion_id', $inscripcion->id)
+                ->where('requisito_id', $requisito->id)
+                ->first();
+
+            if ($docExistente) {
+                Storage::disk('public')->delete($docExistente->archivo);
+                $docExistente->delete();
+            }
+
+            // Guardar el nuevo archivo
+            $path = $request->file('archivo')
+                ->store("documentos/{$inscripcion->id}", 'public');
+
+            DocumentoPostulante::create([
+                'inscripcion_id' => $inscripcion->id,
+                'requisito_id'   => $requisito->id,
+                'archivo'        => $path,
+                'estado'         => 'pendiente',
+                'comentario'     => null,
+                'fecha_subida'   => now(),
+            ]);
+
+            BitacoraLogger::registrar(
+                'SUBIR_DOC',
+                'Documentacion',
+                'Documento subido: '.$requisito->nombre.' para postulante '.$inscripcion->postulante->persona->nombre.' (inscripcion_id='.$inscripcion->id.')'
+            );
+
+            return redirect()->route('documentos.show', $inscripcion)
+                ->with('success', "Documento '{$requisito->nombre}' subido correctamente.");
+        } catch (\Throwable $e) {
+            BitacoraLogger::registrar(
+                'ERROR_SUBIR_DOC',
+                'Documentacion',
+                'Error al subir documento '.$requisito->nombre.': '.$e->getMessage()
+            );
+
+            throw $e;
         }
     }
-    $formatosMimes = implode(',', $mimes);
-    $maxKb = $requisito->tamanio_max_kb;
-
-    $request->validate([
-        'requisito_id' => 'required|exists:requisitos,id',
-        'archivo'      => "required|file|mimes:{$formatosMimes}|max:{$maxKb}",
-    ], [
-        'archivo.mimes' => "El archivo debe ser de tipo: {$requisito->formato_aceptado}",
-        'archivo.max'   => "El archivo no debe superar " . ($maxKb / 1024) . " MB.",
-    ]);
-
-    // Si ya existe un documento para este requisito, eliminar el archivo anterior
-    $docExistente = DocumentoPostulante::where('inscripcion_id', $inscripcion->id)
-        ->where('requisito_id', $requisito->id)
-        ->first();
-
-    if ($docExistente) {
-        Storage::disk('public')->delete($docExistente->archivo);
-        $docExistente->delete();
-    }
-
-    // Guardar el nuevo archivo
-    $path = $request->file('archivo')
-        ->store("documentos/{$inscripcion->id}", 'public');
-
-    DocumentoPostulante::create([
-        'inscripcion_id' => $inscripcion->id,
-        'requisito_id'   => $requisito->id,
-        'archivo'        => $path,
-        'estado'         => 'pendiente',
-        'comentario'     => null,
-        'fecha_subida'   => now(),
-    ]);
-
-    return redirect()->route('documentos.show', $inscripcion)
-        ->with('success', "Documento '{$requisito->nombre}' subido correctamente.");
-}
 
     // Aprobar un documento
     public function aprobar(DocumentoPostulante $documento)
     {
-        $documento->update([
-            'estado'     => 'aprobado',
-            'comentario' => null,
-        ]);
+        try {
+            $documento->update([
+                'estado'     => 'aprobado',
+                'comentario' => null,
+            ]);
 
-        return redirect()->route('documentos.show', $documento->inscripcion_id)
-            ->with('success', "Documento '{$documento->requisito->nombre}' aprobado.");
+            BitacoraLogger::registrar(
+                'VALIDAR_DOC',
+                'Documentacion',
+                'Documento aprobado: '.$documento->requisito->nombre.' ID='.$documento->id
+            );
+
+            return redirect()->route('documentos.show', $documento->inscripcion_id)
+                ->with('success', "Documento '{$documento->requisito->nombre}' aprobado.");
+        } catch (\Throwable $e) {
+            BitacoraLogger::registrar(
+                'ERROR_VALIDAR_DOC',
+                'Documentacion',
+                'Error al aprobar documento ID='.$documento->id.': '.$e->getMessage()
+            );
+
+            throw $e;
+        }
     }
 
     // Rechazar un documento con comentario
@@ -149,6 +184,12 @@ class DocumentoPostulanteController extends Controller
             'estado'     => 'rechazado',
             'comentario' => $request->comentario,
         ]);
+
+        BitacoraLogger::registrar(
+            'RECHAZAR_DOC',
+            'Documentacion',
+            'Documento rechazado: '.$documento->requisito->nombre.' ID='.$documento->id.' motivo: '.$request->comentario
+        );
 
         return redirect()->route('documentos.show', $documento->inscripcion_id)
             ->with('success', "Documento '{$documento->requisito->nombre}' rechazado.");

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Domain\Bitacora\Services\BitacoraLogger;
 use App\Models\Requisito;
 use App\Models\Periodo;
 use Illuminate\Http\Request;
@@ -54,7 +55,7 @@ class RequisitoController extends Controller
             return back()->withErrors(['nombre' => 'Ya existe un requisito con ese nombre en el periodo activo.'])->withInput();
         }
 
-        Requisito::create([
+        $requisito = Requisito::create([
             'periodo_id'       => $periodoActivo->id,
             'nombre'           => $request->nombre,
             'descripcion'      => $request->descripcion,
@@ -63,6 +64,12 @@ class RequisitoController extends Controller
             'tamanio_max_kb'   => $request->tamanio_max_kb,
             'activo'           => true,
         ]);
+
+        BitacoraLogger::registrar(
+            'CREAR',
+            'Requisitos',
+            'Requisito creado: '.$requisito->nombre.' ID='.$requisito->id
+        );
 
         return redirect()->route('requisitos.index')
             ->with('success', 'Requisito registrado correctamente.');
@@ -91,6 +98,12 @@ class RequisitoController extends Controller
             'tamanio_max_kb'   => $request->tamanio_max_kb,
         ]);
 
+        BitacoraLogger::registrar(
+            'EDITAR',
+            'Requisitos',
+            'Requisito editado: '.$requisito->nombre.' ID='.$requisito->id
+        );
+
         return redirect()->route('requisitos.index')
             ->with('success', 'Requisito actualizado correctamente.');
     }
@@ -100,6 +113,13 @@ class RequisitoController extends Controller
         // Regla CU11: No se puede inactivar requisito obligatorio con docs pendientes
         // Por ahora inactivamos lógicamente
         $requisito->update(['activo' => false]);
+
+        BitacoraLogger::registrar(
+            'ELIMINAR',
+            'Requisitos',
+            'Requisito desactivado: '.$requisito->nombre.' ID='.$requisito->id
+        );
+
         return redirect()->route('requisitos.index')
             ->with('success', "Requisito '{$requisito->nombre}' desactivado.");
     }
@@ -107,6 +127,13 @@ class RequisitoController extends Controller
     public function reactivar(Requisito $requisito)
     {
         $requisito->update(['activo' => true]);
+
+        BitacoraLogger::registrar(
+            'ACTIVAR',
+            'Requisitos',
+            'Requisito reactivado: '.$requisito->nombre.' ID='.$requisito->id
+        );
+
         return redirect()->route('requisitos.index')
             ->with('success', "Requisito '{$requisito->nombre}' reactivado.");
     }
