@@ -1,69 +1,90 @@
-<x-app-layout>
-    <x-slot name="header">
-        <div class="flex items-center justify-between">
-            <h2 class="font-semibold text-xl text-gray-800 leading-tight">Catálogo de Permisos del Sistema</h2>
-            <a href="{{ route('permisos.matriz') }}"
-               class="inline-flex items-center px-4 py-2 bg-indigo-600 text-white text-sm font-semibold rounded-md hover:bg-indigo-700">
-                Ver Matriz Rol-Permiso
-            </a>
-        </div>
-    </x-slot>
+@extends('layouts.base')
 
-    <div class="py-8">
-        <div class="max-w-7xl mx-auto sm:px-6 lg:px-8 space-y-4">
+@section('titulo', 'Catálogo de Permisos')
 
-            <div class="bg-blue-50 border border-blue-200 text-blue-800 px-4 py-3 rounded text-sm">
-                Los permisos del sistema están definidos por el código de la aplicación y no se crean dinámicamente.
-                Para asignarlos a un rol, vaya a <a href="{{ route('roles.index') }}" class="underline font-semibold">Gestión de Roles</a>.
-            </div>
+@section('contenido')
 
-            {{-- Filtros --}}
-            <form method="GET" action="{{ route('permisos.index') }}"
-                  class="bg-white shadow-sm sm:rounded-lg p-4 flex flex-wrap items-end gap-3">
-                <div class="flex-1 min-w-[200px]">
-                    <label class="block text-sm text-gray-600 mb-1">Buscar</label>
-                    <input type="text" name="q" value="{{ $q }}" placeholder="Buscar por código o descripción..."
-                           class="border-gray-300 rounded-md shadow-sm w-full">
-                </div>
-                <div>
-                    <label class="block text-sm text-gray-600 mb-1">Módulo</label>
-                    <select name="modulo" class="border-gray-300 rounded-md shadow-sm">
-                        <option value="">Todos</option>
-                        @foreach ($modulosDisponibles as $mod)
-                            <option value="{{ $mod }}" @selected($modulo === $mod)>{{ $mod }}</option>
-                        @endforeach
-                    </select>
-                </div>
-                <button type="submit" class="px-4 py-2 bg-gray-700 text-white text-sm font-semibold rounded-md hover:bg-gray-800">Filtrar</button>
-            </form>
+<div class="page-header d-flex justify-content-between align-items-start mb-4">
+  <div>
+    <h1><i class="bi bi-key-fill me-2"></i>Catálogo de Permisos del Sistema</h1>
+    <p class="page-subtitle">Permisos definidos por la aplicación (solo lectura)</p>
+  </div>
+  <a href="{{ route('permisos.matriz') }}" class="btn btn-cup-primary">
+    <i class="bi bi-grid-3x3 me-1"></i> Ver Matriz Rol-Permiso
+  </a>
+</div>
 
-            @forelse ($permisos as $modulo => $permisosModulo)
-                <div class="bg-white shadow-sm sm:rounded-lg overflow-hidden">
-                    <div class="px-4 py-3 bg-gray-50 border-b">
-                        <h3 class="font-semibold text-indigo-700">{{ $modulo }} <span class="text-gray-400 text-sm">({{ $permisosModulo->count() }})</span></h3>
-                    </div>
-                    <table class="min-w-full divide-y divide-gray-200">
-                        <thead class="bg-gray-50">
-                            <tr>
-                                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Código</th>
-                                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Descripción</th>
-                                <th class="px-4 py-2 text-center text-xs font-medium text-gray-500 uppercase"># Roles con este permiso</th>
-                            </tr>
-                        </thead>
-                        <tbody class="divide-y divide-gray-200">
-                            @foreach ($permisosModulo as $permiso)
-                                <tr>
-                                    <td class="px-4 py-2 text-sm font-mono text-gray-900">{{ $permiso->codigo }}</td>
-                                    <td class="px-4 py-2 text-sm text-gray-700">{{ $permiso->descripcion }}</td>
-                                    <td class="px-4 py-2 text-sm text-gray-700 text-center">{{ $permiso->roles_count }}</td>
-                                </tr>
-                            @endforeach
-                        </tbody>
-                    </table>
-                </div>
-            @empty
-                <div class="bg-white shadow-sm sm:rounded-lg p-6 text-center text-sm text-gray-500">No se encontraron permisos.</div>
-            @endforelse
-        </div>
+<div class="alert alert-info border-0" style="border-radius:8px">
+  <i class="bi bi-info-circle me-2"></i>
+  Los permisos del sistema están definidos por el código de la aplicación y no se crean dinámicamente.
+  Para asignarlos a un rol, vaya a <a href="{{ route('roles.index') }}" class="fw-semibold">Gestión de Roles</a>.
+</div>
+
+<div class="panel-cup mb-3">
+  <div class="panel-cup-header">
+    <strong><i class="bi bi-funnel me-1"></i> Filtros</strong>
+    <a href="{{ route('permisos.index') }}" class="btn btn-sm btn-outline-secondary">
+      <i class="bi bi-x-circle me-1"></i> Limpiar
+    </a>
+  </div>
+  <div class="panel-cup-body">
+    <form method="GET" action="{{ route('permisos.index') }}" class="row g-3">
+      <div class="col-md-8">
+        <label class="form-label small text-muted">Buscar</label>
+        <input type="text" name="q" value="{{ $q }}" class="form-control" placeholder="Buscar por código o descripción...">
+      </div>
+      <div class="col-md-2">
+        <label class="form-label small text-muted">Módulo</label>
+        <select name="modulo" class="form-select" onchange="this.form.submit()">
+          <option value="">Todos</option>
+          @foreach($modulosDisponibles as $mod)
+            <option value="{{ $mod }}" {{ $modulo === $mod ? 'selected' : '' }}>{{ $mod }}</option>
+          @endforeach
+        </select>
+      </div>
+      <div class="col-md-2 d-flex align-items-end">
+        <button type="submit" class="btn btn-cup-primary w-100">
+          <i class="bi bi-search me-1"></i> Filtrar
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+@forelse($permisos as $modulo => $permisosModulo)
+  <div class="panel-cup mb-3">
+    <div class="panel-cup-header">
+      <strong style="color:var(--cup-primary)">{{ $modulo }}
+        <span class="text-muted fw-normal">({{ $permisosModulo->count() }})</span>
+      </strong>
     </div>
-</x-app-layout>
+    <div class="panel-cup-body p-0">
+      <div class="table-responsive">
+      <table class="table-cup table mb-0">
+        <thead>
+          <tr>
+            <th>Código</th>
+            <th>Descripción</th>
+            <th class="text-center"># Roles con este permiso</th>
+          </tr>
+        </thead>
+        <tbody>
+          @foreach($permisosModulo as $permiso)
+            <tr>
+              <td><strong>{{ $permiso->codigo }}</strong></td>
+              <td>{{ $permiso->descripcion }}</td>
+              <td class="text-center"><span class="badge-cup badge-modulo">{{ $permiso->roles_count }}</span></td>
+            </tr>
+          @endforeach
+        </tbody>
+      </table>
+      </div>
+    </div>
+  </div>
+@empty
+  <div class="panel-cup">
+    <div class="panel-cup-body text-center text-muted">No se encontraron permisos.</div>
+  </div>
+@endforelse
+
+@endsection

@@ -1,83 +1,72 @@
 @extends('layouts.base')
-@section('titulo', 'Periodos')
+
+@section('titulo', 'Documentación')
+
 @section('contenido')
-<html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <title>Documentación Postulantes</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-</head>
-<body class="bg-light">
-<div class="container mt-4">
-    <div class="d-flex justify-content-between align-items-center mb-3">
-        <h2>📁 Documentación de Postulantes</h2>
-    </div>
 
-    @if(!$periodoActivo)
-        <div class="alert alert-warning">⚠️ No hay periodo activo.</div>
-    @endif
-
-    @if(session('success'))
-        <div class="alert alert-success">{{ session('success') }}</div>
-    @endif
-
-    <div class="card">
-        <div class="table-responsive">
-            <table class="table table-hover mb-0">
-                <thead class="table-dark">
-                    <tr>
-                        <th>#</th>
-                        <th>CI</th>
-                        <th>Postulante</th>
-                        <th>1ra Carrera</th>
-                        <th>Docs Subidos</th>
-                        <th>Aprobados</th>
-                        <th>Rechazados</th>
-                        <th>Estado</th>
-                        <th>Acciones</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @forelse($inscripciones as $inscripcion)
-                    @php
-                        $c1 = $inscripcion->postulacionCarreras->where('prioridad',1)->first();
-                    @endphp
-                    <tr>
-                        <td>{{ $loop->iteration }}</td>
-                        <td>{{ $inscripcion->postulante->persona->ci }}</td>
-                        <td>{{ $inscripcion->postulante->persona->nombre }}</td>
-                        <td>{{ $c1?->carrera->nombre ?? '—' }}</td>
-                        <td>{{ $inscripcion->total_subidos }} / {{ $inscripcion->total_requisitos }}</td>
-                        <td>
-                            <span class="badge bg-success">{{ $inscripcion->aprobados }}</span>
-                        </td>
-                        <td>
-                            <span class="badge bg-danger">{{ $inscripcion->rechazados }}</span>
-                        </td>
-                        <td>
-                            @if($inscripcion->completo)
-                                <span class="badge bg-success">✅ Completo</span>
-                            @elseif($inscripcion->total_subidos == 0)
-                                <span class="badge bg-secondary">Sin docs</span>
-                            @else
-                                <span class="badge bg-warning text-dark">En revisión</span>
-                            @endif
-                        </td>
-                        <td>
-                            <a href="{{ route('documentos.show', $inscripcion) }}"
-                               class="btn btn-sm btn-primary">Gestionar</a>
-                        </td>
-                    </tr>
-                    @empty
-                    <tr>
-                        <td colspan="9" class="text-center text-muted py-4">
-                            No hay postulantes inscritos en el periodo activo.
-                        </td>
-                    </tr>
-                    @endforelse
-                </tbody>
-            </table>
-        </div>
-    </div>
+<div class="page-header mb-4">
+  <h1><i class="bi bi-folder me-2"></i>Documentación de Postulantes</h1>
+  <p class="page-subtitle">Revisión de documentos cargados por los postulantes inscritos</p>
 </div>
+
+@if(!$periodoActivo)
+  <div class="alert alert-warning border-0" style="border-radius:8px">
+    <i class="bi bi-exclamation-triangle me-2"></i>No hay periodo activo.
+  </div>
+@endif
+
+<div class="panel-cup">
+  <div class="panel-cup-body p-0">
+    <div class="table-responsive">
+    <table class="table-cup table mb-0">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>CI</th>
+          <th>Postulante</th>
+          <th>1ra Carrera</th>
+          <th class="text-center">Docs Subidos</th>
+          <th class="text-center">Aprobados</th>
+          <th class="text-center">Rechazados</th>
+          <th>Estado</th>
+          <th class="text-end">Acciones</th>
+        </tr>
+      </thead>
+      <tbody>
+        @forelse($inscripciones as $inscripcion)
+          @php
+            $c1 = $inscripcion->postulacionCarreras->where('prioridad',1)->first();
+          @endphp
+          <tr>
+            <td>{{ $loop->iteration }}</td>
+            <td>{{ $inscripcion->postulante->persona->ci }}</td>
+            <td><strong>{{ $inscripcion->postulante->persona->nombre }}</strong></td>
+            <td>{{ $c1?->carrera->nombre ?? '—' }}</td>
+            <td class="text-center">{{ $inscripcion->total_subidos }} / {{ $inscripcion->total_requisitos }}</td>
+            <td class="text-center"><span class="badge-cup badge-activo">{{ $inscripcion->aprobados }}</span></td>
+            <td class="text-center"><span class="badge-cup badge-inactivo">{{ $inscripcion->rechazados }}</span></td>
+            <td>
+              @if($inscripcion->completo)
+                <span class="badge-cup badge-activo"><i class="bi bi-check-circle me-1"></i>Completo</span>
+              @elseif($inscripcion->total_subidos == 0)
+                <span class="badge bg-secondary">Sin docs</span>
+              @else
+                <span class="badge bg-warning text-dark">En revisión</span>
+              @endif
+            </td>
+            <td class="text-end">
+              <a href="{{ route('documentos.show', $inscripcion) }}" class="btn btn-sm btn-cup-primary">
+                <i class="bi bi-folder2-open me-1"></i> Gestionar
+              </a>
+            </td>
+          </tr>
+        @empty
+          <tr><td colspan="9" class="text-center py-4 text-muted">No hay postulantes inscritos en el periodo activo.</td></tr>
+        @endforelse
+      </tbody>
+    </table>
+    </div>
+  </div>
+</div>
+
 @endsection

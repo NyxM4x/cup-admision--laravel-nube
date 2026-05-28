@@ -1,25 +1,64 @@
 <x-guest-layout>
-    <div class="mb-4 text-sm text-gray-600">
-        {{ __('Forgot your password? No problem. Just let us know your email address and we will email you a password reset link that will allow you to choose a new one.') }}
-    </div>
+
+    <h1>Recuperar Contraseña</h1>
+    <p class="auth-form-subtitle">
+        ¿Olvidaste tu contraseña? Ingresá tu correo electrónico y te
+        enviaremos un enlace para restablecerla.
+    </p>
 
     <!-- Session Status -->
-    <x-auth-session-status class="mb-4" :status="session('status')" />
+    @if (session('status'))
+        <div class="auth-success">
+            <i class="bi bi-check-circle me-1"></i>
+            {{ session('status') }}
+        </div>
+    @endif
+
+    <!-- Errores -->
+    @if ($errors->any())
+        <div class="auth-error">
+            <i class="bi bi-exclamation-triangle-fill"></i>
+            <div>
+                @foreach ($errors->all() as $error)
+                    <div>{{ $error }}</div>
+                @endforeach
+            </div>
+        </div>
+    @endif
 
     <form method="POST" action="{{ route('password.email') }}">
         @csrf
 
-        <!-- Email Address -->
-        <div>
-            <x-input-label for="email" :value="__('Email')" />
-            <x-text-input id="email" class="block mt-1 w-full" type="email" name="email" :value="old('email')" required autofocus />
-            <x-input-error :messages="$errors->get('email')" class="mt-2" />
+        <div class="mb-3">
+            <label for="email" class="form-label">Correo electrónico</label>
+            <div class="auth-input-wrap">
+                <i class="bi bi-envelope input-icon"></i>
+                <input id="email" type="email" name="email"
+                       class="form-control"
+                       value="{{ old('email') }}"
+                       required autofocus
+                       placeholder="usuario@cup.uagrm.bo">
+            </div>
         </div>
 
-        <div class="flex items-center justify-end mt-4">
-            <x-primary-button>
-                {{ __('Email Password Reset Link') }}
-            </x-primary-button>
+        <button type="submit" class="btn-cup">
+            <i class="bi bi-envelope-paper me-2"></i>
+            Enviar Enlace de Recuperación
+        </button>
+
+        <div class="auth-meta">
+            <span></span>
+            <a href="{{ route('login') }}">
+                <i class="bi bi-arrow-left me-1"></i>
+                Volver al login
+            </a>
         </div>
+
+        <div class="auth-form-footer">
+            Si no recibís el correo en unos minutos, revisá tu carpeta de spam
+            o contactá al Coordinador del CUP.
+        </div>
+
     </form>
+
 </x-guest-layout>

@@ -1,54 +1,84 @@
 <x-guest-layout>
-    <!-- Encabezado CUP -->
-    <div class="mb-6 text-center">
-        <h1 class="text-xl font-bold text-gray-800">Sistema de Admisión CUP - FICCT UAGRM</h1>
-        <p class="text-sm text-gray-600 mt-1">Curso Preuniversitario</p>
-        <h2 class="text-base font-semibold text-gray-700 mt-3">Iniciar Sesión</h2>
-    </div>
+
+    <h1>Iniciar Sesión</h1>
+    <p class="auth-form-subtitle">
+        Ingresá con tus credenciales institucionales para acceder al sistema.
+    </p>
 
     <!-- Session Status -->
-    <x-auth-session-status class="mb-4" :status="session('status')" />
+    @if (session('status'))
+        <div class="auth-success">
+            <i class="bi bi-check-circle me-1"></i>
+            {{ session('status') }}
+        </div>
+    @endif
+
+    <!-- Errores -->
+    @if ($errors->any())
+        <div class="auth-error">
+            <i class="bi bi-exclamation-triangle-fill"></i>
+            <div>
+                @foreach ($errors->all() as $error)
+                    <div>{{ $error }}</div>
+                @endforeach
+            </div>
+        </div>
+    @endif
 
     <form method="POST" action="{{ route('login') }}">
         @csrf
 
-        <!-- Email Address -->
-        <div>
-            <x-input-label for="email" :value="__('Email')" />
-            <x-text-input id="email" class="block mt-1 w-full" type="email" name="email" :value="old('email')" required autofocus autocomplete="username" />
-            <x-input-error :messages="$errors->get('email')" class="mt-2" />
+        <!-- Email -->
+        <div class="mb-3">
+            <label for="email" class="form-label">Correo electrónico</label>
+            <div class="auth-input-wrap">
+                <i class="bi bi-envelope input-icon"></i>
+                <input id="email" type="email" name="email"
+                       class="form-control"
+                       value="{{ old('email') }}"
+                       required autofocus autocomplete="username"
+                       placeholder="usuario@cup.uagrm.bo">
+            </div>
         </div>
 
         <!-- Password -->
-        <div class="mt-4">
-            <x-input-label for="password" :value="__('Password')" />
-
-            <x-text-input id="password" class="block mt-1 w-full"
-                            type="password"
-                            name="password"
-                            required autocomplete="current-password" />
-
-            <x-input-error :messages="$errors->get('password')" class="mt-2" />
+        <div class="mb-3">
+            <label for="password" class="form-label">Contraseña</label>
+            <div class="auth-input-wrap">
+                <i class="bi bi-lock input-icon"></i>
+                <input id="password" type="password" name="password"
+                       class="form-control"
+                       required autocomplete="current-password"
+                       placeholder="Ingresá tu contraseña">
+            </div>
         </div>
 
-        <!-- Remember Me -->
-        <div class="block mt-4">
-            <label for="remember_me" class="inline-flex items-center">
-                <input id="remember_me" type="checkbox" class="rounded border-gray-300 text-indigo-600 shadow-sm focus:ring-indigo-500" name="remember">
-                <span class="ms-2 text-sm text-gray-600">{{ __('Remember me') }}</span>
+        <!-- Remember -->
+        <div class="form-check mb-3">
+            <input type="checkbox" id="remember_me" name="remember" class="form-check-input">
+            <label for="remember_me" class="form-check-label" style="font-size:0.88rem; color:var(--cup-muted);">
+                Recordar mi sesión
             </label>
         </div>
 
-        <div class="flex items-center justify-end mt-4">
-            @if (Route::has('password.request'))
-                <a class="underline text-sm text-gray-600 hover:text-gray-900 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500" href="{{ route('password.request') }}">
-                    {{ __('Forgot your password?') }}
-                </a>
-            @endif
+        <button type="submit" class="btn-cup">
+            <i class="bi bi-box-arrow-in-right me-2"></i>
+            Iniciar Sesión
+        </button>
 
-            <x-primary-button class="ms-3">
-                {{ __('Log in') }}
-            </x-primary-button>
+        @if (Route::has('password.request'))
+            <div class="auth-meta">
+                <span></span>
+                <a href="{{ route('password.request') }}">
+                    ¿Olvidaste tu contraseña?
+                </a>
+            </div>
+        @endif
+
+        <div class="auth-form-footer">
+            Para problemas de acceso, contactá al Coordinador del CUP.
         </div>
+
     </form>
+
 </x-guest-layout>

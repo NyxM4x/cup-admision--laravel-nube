@@ -1,56 +1,76 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <title>Detalle Postulante</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-</head>
-<body class="bg-light">
-<div class="container mt-4" style="max-width:700px">
-    <h2>🎓 Detalle del Postulante</h2>
-    <a href="{{ route('postulantes.index') }}" class="btn btn-secondary mb-3">← Volver</a>
-    <a href="{{ route('postulantes.edit', $postulante) }}" class="btn btn-warning mb-3">✏️ Editar</a>
+@extends('layouts.base')
 
-    <div class="card p-4 bg-white mb-3">
-        <h5 class="text-primary">📋 Datos Personales</h5>
-        <table class="table table-borderless mb-0">
-            <tr><th width="40%">CI</th><td>{{ $postulante->persona->ci }}</td></tr>
-            <tr><th>Nombre</th><td>{{ $postulante->persona->nombre }}</td></tr>
-            <tr><th>Fecha nacimiento</th><td>{{ optional($postulante->persona->fecha_nacimiento)->format('d/m/Y') ?? '—' }}</td></tr>
-            <tr><th>Sexo</th><td>{{ $postulante->persona->sexo == 'M' ? 'Masculino' : ($postulante->persona->sexo == 'F' ? 'Femenino' : '—') }}</td></tr>
-            <tr><th>Dirección</th><td>{{ $postulante->persona->direccion ?? '—' }}</td></tr>
-            <tr><th>Teléfono</th><td>{{ $postulante->persona->telefono ?? '—' }}</td></tr>
-            <tr><th>Correo</th><td>{{ $postulante->persona->correo ?? '—' }}</td></tr>
-            <tr><th>Colegio</th><td>{{ $postulante->colegio }}</td></tr>
-            <tr>
-                <th>Estado</th>
-                <td>
-                    @php $badges = ['pendiente'=>'warning','inscrito'=>'primary','aprobado'=>'success','reprobado'=>'danger']; @endphp
-                    <span class="badge bg-{{ $badges[$postulante->estado] ?? 'secondary' }}">
-                        {{ ucfirst($postulante->estado) }}
-                    </span>
-                </td>
-            </tr>
-        </table>
-    </div>
+@section('titulo', 'Detalle del Postulante')
 
-    @foreach($postulante->inscripciones as $inscripcion)
-    <div class="card p-4 bg-white">
-        <h5 class="text-primary">📚 Inscripción — Periodo {{ $inscripcion->periodo->fecha_ini_inscripcion->format('Y') }}</h5>
-        <p><strong>Fecha:</strong> {{ $inscripcion->fecha_inscripcion->format('d/m/Y') }}</p>
-        <p><strong>Estado:</strong> {{ ucfirst($inscripcion->estado) }}</p>
+@section('contenido')
 
-        <h6>Carreras postuladas:</h6>
-        <ul>
-            @foreach($inscripcion->postulacionCarreras as $pc)
-                <li>
-                    <strong>Opción {{ $pc->prioridad }}:</strong>
-                    {{ $pc->carrera->codigo }} — {{ $pc->carrera->nombre }}
-                </li>
-            @endforeach
-        </ul>
-    </div>
-    @endforeach
+<div class="page-header d-flex justify-content-between align-items-start mb-4">
+  <div>
+    <h1><i class="bi bi-person-vcard me-2"></i>Detalle del Postulante</h1>
+    <p class="page-subtitle">{{ $postulante->persona->nombre }}</p>
+  </div>
+  <div class="d-flex gap-2">
+    <a href="{{ route('postulantes.edit', $postulante) }}" class="btn btn-cup-primary">
+      <i class="bi bi-pencil me-1"></i> Editar
+    </a>
+    <a href="{{ route('postulantes.index') }}" class="btn btn-outline-secondary">
+      <i class="bi bi-arrow-left me-1"></i> Volver
+    </a>
+  </div>
 </div>
-</body>
-</html>
+
+@php $badges = ['pendiente'=>'badge-warning-cup','inscrito'=>'badge-modulo','aprobado'=>'badge-activo','reprobado'=>'badge-inactivo']; @endphp
+
+<div class="row g-3">
+  <div class="col-lg-8">
+    <div class="panel-cup">
+      <div class="panel-cup-header">
+        <strong><i class="bi bi-clipboard me-1"></i> Datos Personales</strong>
+        <span class="badge-cup {{ $badges[$postulante->estado] ?? 'badge-modulo' }}">{{ ucfirst($postulante->estado) }}</span>
+      </div>
+      <div class="panel-cup-body">
+        <table class="table mb-0">
+          <tbody>
+            <tr><th style="width:200px;color:var(--cup-muted);font-weight:500;font-size:0.85rem;">CI</th><td>{{ $postulante->persona->ci }}</td></tr>
+            <tr><th style="color:var(--cup-muted);font-weight:500;font-size:0.85rem;">Nombre</th><td><strong>{{ $postulante->persona->nombre }}</strong></td></tr>
+            <tr><th style="color:var(--cup-muted);font-weight:500;font-size:0.85rem;">Fecha nacimiento</th><td>{{ optional($postulante->persona->fecha_nacimiento)->format('d/m/Y') ?? '—' }}</td></tr>
+            <tr><th style="color:var(--cup-muted);font-weight:500;font-size:0.85rem;">Sexo</th><td>{{ $postulante->persona->sexo == 'M' ? 'Masculino' : ($postulante->persona->sexo == 'F' ? 'Femenino' : '—') }}</td></tr>
+            <tr><th style="color:var(--cup-muted);font-weight:500;font-size:0.85rem;">Dirección</th><td>{{ $postulante->persona->direccion ?? '—' }}</td></tr>
+            <tr><th style="color:var(--cup-muted);font-weight:500;font-size:0.85rem;">Teléfono</th><td>{{ $postulante->persona->telefono ?? '—' }}</td></tr>
+            <tr><th style="color:var(--cup-muted);font-weight:500;font-size:0.85rem;">Correo</th><td>{{ $postulante->persona->correo ?? '—' }}</td></tr>
+            <tr><th style="color:var(--cup-muted);font-weight:500;font-size:0.85rem;">Colegio</th><td>{{ $postulante->colegio }}</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-4">
+    @forelse($postulante->inscripciones as $inscripcion)
+      <div class="panel-cup mb-3">
+        <div class="panel-cup-header">
+          <strong><i class="bi bi-mortarboard me-1"></i> Inscripción {{ $inscripcion->periodo->fecha_ini_inscripcion->format('Y') }}</strong>
+        </div>
+        <div class="panel-cup-body">
+          <p class="mb-1"><small class="text-muted">Fecha:</small> {{ $inscripcion->fecha_inscripcion->format('d/m/Y') }}</p>
+          <p class="mb-3"><small class="text-muted">Estado:</small> {{ ucfirst($inscripcion->estado) }}</p>
+          <small class="text-muted d-block mb-2">Carreras postuladas:</small>
+          @foreach($inscripcion->postulacionCarreras as $pc)
+            <div class="mb-1">
+              <span class="badge-cup badge-modulo">Opción {{ $pc->prioridad }}</span>
+              {{ $pc->carrera->codigo }} — {{ $pc->carrera->nombre }}
+            </div>
+          @endforeach
+        </div>
+      </div>
+    @empty
+      <div class="panel-cup">
+        <div class="panel-cup-body text-center text-muted">
+          <i class="bi bi-inbox d-block mb-2 fs-3"></i>Sin inscripciones registradas.
+        </div>
+      </div>
+    @endforelse
+  </div>
+</div>
+
+@endsection

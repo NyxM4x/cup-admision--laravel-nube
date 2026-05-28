@@ -1,46 +1,54 @@
-<x-app-layout>
-    <x-slot name="header">
-        <h2 class="font-semibold text-xl text-gray-800 leading-tight">Editar Aula</h2>
-    </x-slot>
+@extends('layouts.base')
 
-    <div class="py-8">
-        <div class="max-w-2xl mx-auto sm:px-6 lg:px-8">
-            <div class="bg-white shadow-sm sm:rounded-lg p-6">
-                <form method="POST" action="{{ route('aulas.update', $aulaModel->id) }}" class="space-y-4">
-                    @csrf
-                    @method('PUT')
+@section('titulo', 'Editar Aula')
 
-                    <div>
-                        <x-input-label for="codigo" value="Código" />
-                        <x-text-input id="codigo" name="codigo" type="text" class="block mt-1 w-full" :value="old('codigo', $aulaModel->codigo)" required autofocus />
-                        <x-input-error :messages="$errors->get('codigo')" class="mt-2" />
-                    </div>
+@section('contenido')
 
-                    <div>
-                        <x-input-label for="edificio" value="Edificio" />
-                        <x-text-input id="edificio" name="edificio" type="text" class="block mt-1 w-full" :value="old('edificio', $aulaModel->edificio)" required />
-                        <x-input-error :messages="$errors->get('edificio')" class="mt-2" />
-                    </div>
+<div class="page-header d-flex justify-content-between align-items-start mb-4">
+  <div>
+    <h1><i class="bi bi-pencil-square me-2"></i>Editar Aula: {{ $aulaModel->codigo }}</h1>
+    <p class="page-subtitle">Modificar los datos del aula</p>
+  </div>
+  <a href="{{ route('aulas.index') }}" class="btn btn-outline-secondary">
+    <i class="bi bi-arrow-left me-1"></i> Volver
+  </a>
+</div>
 
-                    <div>
-                        <x-input-label for="capacidad" value="Capacidad" />
-                        <x-text-input id="capacidad" name="capacidad" type="number" min="1" max="500" class="block mt-1 w-full" :value="old('capacidad', $aulaModel->capacidad)" required />
-                        <x-input-error :messages="$errors->get('capacidad')" class="mt-2" />
-                    </div>
+@if($errors->any())
+  <div class="alert alert-cup-danger">
+    <i class="bi bi-exclamation-triangle me-2"></i>
+    @foreach($errors->all() as $error)<div>{{ $error }}</div>@endforeach
+  </div>
+@endif
 
-                    <div>
-                        <x-input-label for="equipamiento" value="Equipamiento (opcional)" />
-                        <textarea id="equipamiento" name="equipamiento" rows="2"
-                                  class="block mt-1 w-full border-gray-300 rounded-md shadow-sm">{{ old('equipamiento', $aulaModel->equipamiento) }}</textarea>
-                        <x-input-error :messages="$errors->get('equipamiento')" class="mt-2" />
-                    </div>
+<div class="panel-cup" style="max-width:720px">
+  <div class="panel-cup-body">
+    <form method="POST" action="{{ route('aulas.update', $aulaModel->id) }}">
+      @csrf @method('PUT')
+      <div class="mb-3">
+        <label class="form-label">Código <span class="text-danger">*</span></label>
+        <input type="text" name="codigo" value="{{ old('codigo', $aulaModel->codigo) }}" class="form-control" maxlength="20" required>
+      </div>
+      <div class="mb-3">
+        <label class="form-label">Edificio <span class="text-danger">*</span></label>
+        <input type="text" name="edificio" value="{{ old('edificio', $aulaModel->edificio) }}" class="form-control" maxlength="50" required>
+      </div>
+      <div class="mb-3">
+        <label class="form-label">Capacidad <span class="text-danger">*</span></label>
+        <input type="number" name="capacidad" value="{{ old('capacidad', $aulaModel->capacidad) }}" class="form-control" min="1" max="500" required>
+      </div>
+      <div class="mb-4">
+        <label class="form-label">Equipamiento</label>
+        <textarea name="equipamiento" class="form-control" rows="3" maxlength="1000">{{ old('equipamiento', $aulaModel->equipamiento) }}</textarea>
+      </div>
+      <div class="d-flex gap-2">
+        <button type="submit" class="btn btn-cup-primary">
+          <i class="bi bi-check-circle me-1"></i> Actualizar
+        </button>
+        <a href="{{ route('aulas.index') }}" class="btn btn-outline-secondary">Cancelar</a>
+      </div>
+    </form>
+  </div>
+</div>
 
-                    <div class="flex items-center justify-end gap-3 pt-2">
-                        <a href="{{ route('aulas.index') }}" class="text-sm text-gray-600 hover:text-gray-900">Cancelar</a>
-                        <x-primary-button>Actualizar</x-primary-button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    </div>
-</x-app-layout>
+@endsection
