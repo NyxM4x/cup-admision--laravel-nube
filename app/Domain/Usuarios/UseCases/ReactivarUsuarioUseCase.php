@@ -19,11 +19,14 @@ class ReactivarUsuarioUseCase
         }
 
         $this->repo->setActivo($user, true);
+        $user->failed_logins = 0;
+        $user->bloqueado_hasta = null;
+        $user->save();
 
         BitacoraLogger::registrar(
             'USUARIO_REACTIVADO',
             'Seguridad',
-            'Usuario reactivado: '.$user->email
+            'Usuario reactivado/desbloqueado: '.$user->email
         );
 
         return $user;

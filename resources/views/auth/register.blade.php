@@ -50,7 +50,7 @@
                 <input id="password" type="password" name="password"
                        class="form-control"
                        required
-                       placeholder="Mínimo 8 caracteres">
+                       placeholder="Mínimo 8 caracteres, 1 mayúscula y 1 símbolo">
             </div>
         </div>
 

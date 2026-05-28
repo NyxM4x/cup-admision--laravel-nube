@@ -76,7 +76,9 @@
             @endif
           </td>
           <td class="text-center">
-            @if($u->activo)
+            @if($u->bloqueado_hasta && now()->lessThan($u->bloqueado_hasta))
+              <span class="badge-cup badge-danger">Bloqueado</span>
+            @elseif($u->activo)
               <span class="badge-cup badge-activo">Activo</span>
             @else
               <span class="badge-cup badge-inactivo">Inactivo</span>
@@ -86,7 +88,14 @@
             <a href="{{ route('usuarios.edit', $u->id) }}" class="btn-action btn-action-edit" title="Editar">
               <i class="bi bi-pencil"></i>
             </a>
-            @if($u->activo)
+            @if($u->bloqueado_hasta && now()->lessThan($u->bloqueado_hasta))
+              <form action="{{ route('usuarios.reactivar', $u->id) }}" method="POST" style="display:inline">
+                @csrf
+                <button type="submit" class="btn-action btn-action-success" title="Desbloquear">
+                  <i class="bi bi-unlock"></i>
+                </button>
+              </form>
+            @elseif($u->activo)
               <form action="{{ route('usuarios.destroy', $u->id) }}" method="POST" style="display:inline"
                     onsubmit="return confirm('¿Inactivar al usuario {{ $u->name }}?')">
                 @csrf @method('DELETE')
