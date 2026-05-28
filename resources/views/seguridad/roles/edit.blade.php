@@ -1,69 +1,85 @@
-<x-app-layout>
-    <x-slot name="header">
-        <h2 class="font-semibold text-xl text-gray-800 leading-tight">Editar Rol</h2>
-    </x-slot>
+@extends('layouts.base')
 
-    <div class="py-8">
-        <div class="max-w-3xl mx-auto sm:px-6 lg:px-8">
-            <div class="bg-white shadow-sm sm:rounded-lg p-6">
-                @php
-                    $esAdmin = $rolModel->nombre === 'Administrador';
-                    $marcados = old('permisos', $permisosAsignados);
-                @endphp
+@section('titulo', 'Editar Rol')
 
-                @if ($esAdmin)
-                    <div class="mb-4 bg-blue-50 border border-blue-200 text-blue-800 px-4 py-3 rounded text-sm">
-                        El rol Administrador siempre conserva todos los permisos del sistema.
-                    </div>
-                @endif
+@section('contenido')
 
-                <form method="POST" action="{{ route('roles.update', $rolModel->id) }}" class="space-y-5">
-                    @csrf
-                    @method('PUT')
+@php
+  $esAdmin = $rolModel->nombre === 'Administrador';
+  $marcados = old('permisos', $permisosAsignados);
+@endphp
 
-                    <div>
-                        <x-input-label for="nombre" value="Nombre" />
-                        <x-text-input id="nombre" name="nombre" type="text" class="block mt-1 w-full"
-                                      :value="old('nombre', $rolModel->nombre)" required autofocus :readonly="$esAdmin" />
-                        <x-input-error :messages="$errors->get('nombre')" class="mt-2" />
-                    </div>
+<div class="page-header d-flex justify-content-between align-items-start mb-4">
+  <div>
+    <h1><i class="bi bi-pencil-square me-2"></i>Editar Rol: {{ $rolModel->nombre }}</h1>
+    <p class="page-subtitle">Modificar datos y permisos del rol</p>
+  </div>
+  <a href="{{ route('roles.index') }}" class="btn btn-outline-secondary">
+    <i class="bi bi-arrow-left me-1"></i> Volver
+  </a>
+</div>
 
-                    <div>
-                        <x-input-label for="descripcion" value="Descripción" />
-                        <textarea id="descripcion" name="descripcion" rows="2"
-                                  class="block mt-1 w-full border-gray-300 rounded-md shadow-sm">{{ old('descripcion', $rolModel->descripcion) }}</textarea>
-                        <x-input-error :messages="$errors->get('descripcion')" class="mt-2" />
-                    </div>
+@if($errors->any())
+  <div class="alert alert-cup-danger">
+    <i class="bi bi-exclamation-triangle me-2"></i>
+    @foreach($errors->all() as $error)<div>{{ $error }}</div>@endforeach
+  </div>
+@endif
 
-                    <div>
-                        <h3 class="font-semibold text-gray-800 mb-2">Permisos del rol</h3>
-                        <x-input-error :messages="$errors->get('permisos')" class="mb-2" />
-                        <div class="space-y-4">
-                            @foreach ($permisos as $modulo => $permisosModulo)
-                                <fieldset class="border border-gray-200 rounded-md p-4">
-                                    <legend class="px-2 text-sm font-semibold text-indigo-700">{{ $modulo }}</legend>
-                                    <div class="grid sm:grid-cols-2 gap-2">
-                                        @foreach ($permisosModulo as $permiso)
-                                            <label class="inline-flex items-start gap-2 text-sm text-gray-700">
-                                                <input type="checkbox" name="permisos[]" value="{{ $permiso->id }}"
-                                                       @checked($esAdmin || in_array($permiso->id, $marcados))
-                                                       @disabled($esAdmin)
-                                                       class="mt-1 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500">
-                                                <span><strong>{{ $permiso->codigo }}</strong>: {{ $permiso->descripcion }}</span>
-                                            </label>
-                                        @endforeach
-                                    </div>
-                                </fieldset>
-                            @endforeach
-                        </div>
-                    </div>
+@if($esAdmin)
+  <div class="alert alert-warning border-0" style="border-radius:8px">
+    <i class="bi bi-shield-fill-exclamation me-2"></i>
+    El rol <strong>Administrador</strong> es del sistema y siempre conserva todos los permisos. Su nombre y permisos no se pueden modificar.
+  </div>
+@endif
 
-                    <div class="flex items-center justify-end gap-3 pt-2">
-                        <a href="{{ route('roles.index') }}" class="text-sm text-gray-600 hover:text-gray-900">Cancelar</a>
-                        <x-primary-button>Actualizar</x-primary-button>
-                    </div>
-                </form>
+<div class="panel-cup" style="max-width:900px">
+  <div class="panel-cup-body">
+    <form method="POST" action="{{ route('roles.update', $rolModel->id) }}">
+      @csrf @method('PUT')
+
+      <div class="mb-3">
+        <label class="form-label">Nombre <span class="text-danger">*</span></label>
+        <input type="text" name="nombre" value="{{ old('nombre', $rolModel->nombre) }}" class="form-control"
+               required autofocus {{ $esAdmin ? 'readonly' : '' }}>
+      </div>
+
+      <div class="mb-4">
+        <label class="form-label">Descripción</label>
+        <textarea name="descripcion" rows="2" class="form-control">{{ old('descripcion', $rolModel->descripcion) }}</textarea>
+      </div>
+
+      <h5 class="mb-3" style="color:var(--cup-primary)">
+        <i class="bi bi-key-fill me-1"></i> Permisos del rol
+      </h5>
+
+      @foreach($permisos as $modulo => $permisosModulo)
+        <h6 class="text-uppercase small fw-bold text-muted border-bottom pb-1 mt-3 mb-2">{{ $modulo }}</h6>
+        <div class="row g-2 mb-2">
+          @foreach($permisosModulo as $permiso)
+            <div class="col-md-6">
+              <div class="form-check">
+                <input class="form-check-input" type="checkbox" name="permisos[]" value="{{ $permiso->id }}"
+                       id="perm{{ $permiso->id }}"
+                       {{ ($esAdmin || in_array($permiso->id, $marcados)) ? 'checked' : '' }}
+                       {{ $esAdmin ? 'disabled' : '' }}>
+                <label class="form-check-label" for="perm{{ $permiso->id }}">
+                  <strong>{{ $permiso->codigo }}</strong>: {{ $permiso->descripcion }}
+                </label>
+              </div>
             </div>
+          @endforeach
         </div>
-    </div>
-</x-app-layout>
+      @endforeach
+
+      <div class="d-flex gap-2 mt-4">
+        <button type="submit" class="btn btn-cup-primary">
+          <i class="bi bi-check-circle me-1"></i> Actualizar
+        </button>
+        <a href="{{ route('roles.index') }}" class="btn btn-outline-secondary">Cancelar</a>
+      </div>
+    </form>
+  </div>
+</div>
+
+@endsection

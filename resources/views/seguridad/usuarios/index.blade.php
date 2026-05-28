@@ -1,111 +1,123 @@
 @extends('layouts.base')
+
 @section('titulo', 'Gestión de Usuarios')
 
 @section('contenido')
-<div class="d-flex justify-content-between align-items-center mb-3">
-    <h4><i class="bi bi-people-fill me-2"></i>Gestión de Usuarios</h4>
-    <a href="{{ route('usuarios.create') }}" class="btn btn-primary">
-        <i class="bi bi-plus-lg me-1"></i>Nuevo Usuario
+
+<div class="page-header d-flex justify-content-between align-items-start mb-4">
+  <div>
+    <h1><i class="bi bi-people-fill me-2"></i>Gestión de Usuarios</h1>
+    <p class="page-subtitle">Administración de cuentas de acceso al sistema</p>
+  </div>
+  <a href="{{ route('usuarios.create') }}" class="btn btn-cup-primary">
+    <i class="bi bi-plus-circle me-1"></i> Nuevo Usuario
+  </a>
+</div>
+
+@if($errors->any())
+  <div class="alert alert-cup-danger">
+    <i class="bi bi-exclamation-triangle me-2"></i>
+    @foreach($errors->all() as $error)<div>{{ $error }}</div>@endforeach
+  </div>
+@endif
+
+<div class="panel-cup">
+  <div class="panel-cup-header">
+    <strong><i class="bi bi-funnel me-1"></i> Filtros</strong>
+    <a href="{{ route('usuarios.index') }}" class="btn btn-sm btn-outline-secondary">
+      <i class="bi bi-x-circle me-1"></i> Limpiar
     </a>
-</div>
+  </div>
+  <div class="panel-cup-body">
 
-{{-- Filtros --}}
-<form method="GET" action="{{ route('usuarios.index') }}" class="card border-0 shadow-sm p-3 mb-3">
-    <div class="row g-2 align-items-end">
-        <div class="col-md-6">
-            <label class="form-label small text-muted">Buscar</label>
-            <input type="text" name="q" value="{{ $q }}" placeholder="Nombre, email o CI..."
-                   class="form-control form-control-sm">
-        </div>
-        <div class="col-md-3">
-            <label class="form-label small text-muted">Estado</label>
-            <select name="estado" class="form-select form-select-sm">
-                <option value="activos"   @selected($estado === 'activos')>Activos</option>
-                <option value="inactivos" @selected($estado === 'inactivos')>Inactivos</option>
-                <option value="todos"     @selected($estado === 'todos')>Todos</option>
-            </select>
-        </div>
-        <div class="col-md-3">
-            <button type="submit" class="btn btn-secondary btn-sm w-100">
-                <i class="bi bi-search me-1"></i>Filtrar
-            </button>
-        </div>
-    </div>
-</form>
+    <form method="GET" action="{{ route('usuarios.index') }}" class="row g-3 mb-4">
+      <div class="col-md-7">
+        <label class="form-label small text-muted">Buscar</label>
+        <input type="text" name="q" value="{{ $q }}" class="form-control" placeholder="Nombre, email o CI...">
+      </div>
+      <div class="col-md-3">
+        <label class="form-label small text-muted">Estado</label>
+        <select name="estado" class="form-select" onchange="this.form.submit()">
+          <option value="activos"   {{ $estado === 'activos'   ? 'selected' : '' }}>Activos</option>
+          <option value="inactivos" {{ $estado === 'inactivos' ? 'selected' : '' }}>Inactivos</option>
+          <option value="todos"     {{ $estado === 'todos'     ? 'selected' : '' }}>Todos</option>
+        </select>
+      </div>
+      <div class="col-md-2 d-flex align-items-end">
+        <button type="submit" class="btn btn-cup-primary w-100">
+          <i class="bi bi-search me-1"></i> Filtrar
+        </button>
+      </div>
+    </form>
 
-{{-- Tabla --}}
-<div class="card border-0 shadow-sm">
     <div class="table-responsive">
-        <table class="table table-hover table-bordered mb-0">
-            <thead class="table-dark">
-                <tr>
-                    <th>Nombre</th>
-                    <th>Email</th>
-                    <th>CI</th>
-                    <th>Rol</th>
-                    <th class="text-center">Estado</th>
-                    <th class="text-center">Acciones</th>
-                </tr>
-            </thead>
-            <tbody>
-                @forelse ($usuarios as $u)
-                    <tr>
-                        <td>{{ $u->name }}</td>
-                        <td>{{ $u->email }}</td>
-                        <td>{{ $u->ci ?? '—' }}</td>
-                        <td>
-                            @if($u->rol)
-                                <span class="badge bg-primary">{{ $u->rol->nombre }}</span>
-                            @else
-                                <span class="text-muted">—</span>
-                            @endif
-                        </td>
-                        <td class="text-center">
-                            @if ($u->activo)
-                                <span class="badge bg-success">Activo</span>
-                            @else
-                                <span class="badge bg-danger">Inactivo</span>
-                            @endif
-                        </td>
-                        <td class="text-center">
-                            <a href="{{ route('usuarios.edit', $u->id) }}"
-                               class="btn btn-sm btn-warning">
-                                <i class="bi bi-pencil"></i> Editar
-                            </a>
-                            @if ($u->activo)
-                                <form method="POST" action="{{ route('usuarios.destroy', $u->id) }}"
-                                      class="d-inline"
-                                      onsubmit="return confirm('¿Inactivar al usuario {{ $u->name }}?')">
-                                    @csrf @method('DELETE')
-                                    <button type="submit" class="btn btn-sm btn-danger">
-                                        <i class="bi bi-slash-circle"></i> Inactivar
-                                    </button>
-                                </form>
-                            @else
-                                <form method="POST" action="{{ route('usuarios.reactivar', $u->id) }}"
-                                      class="d-inline">
-                                    @csrf
-                                    <button type="submit" class="btn btn-sm btn-success">
-                                        <i class="bi bi-check-circle"></i> Reactivar
-                                    </button>
-                                </form>
-                            @endif
-                        </td>
-                    </tr>
-                @empty
-                    <tr>
-                        <td colspan="6" class="text-center text-muted py-4">
-                            No se encontraron usuarios.
-                        </td>
-                    </tr>
-                @endforelse
-            </tbody>
-        </table>
+    <table class="table-cup table mb-0">
+      <thead>
+        <tr>
+          <th>Nombre</th>
+          <th>Email</th>
+          <th>CI</th>
+          <th>Rol</th>
+          <th class="text-center">Estado</th>
+          <th class="text-end">Acciones</th>
+        </tr>
+      </thead>
+      <tbody>
+        @forelse($usuarios as $u)
+        <tr>
+          <td><strong>{{ $u->name }}</strong></td>
+          <td>{{ $u->email }}</td>
+          <td>{{ $u->ci ?? '—' }}</td>
+          <td>
+            @if($u->rol)
+              <span class="badge-cup badge-modulo">{{ $u->rol->nombre }}</span>
+            @else
+              <span class="text-muted">—</span>
+            @endif
+          </td>
+          <td class="text-center">
+            @if($u->activo)
+              <span class="badge-cup badge-activo">Activo</span>
+            @else
+              <span class="badge-cup badge-inactivo">Inactivo</span>
+            @endif
+          </td>
+          <td class="text-end">
+            <a href="{{ route('usuarios.edit', $u->id) }}" class="btn-action btn-action-edit" title="Editar">
+              <i class="bi bi-pencil"></i>
+            </a>
+            @if($u->activo)
+              <form action="{{ route('usuarios.destroy', $u->id) }}" method="POST" style="display:inline"
+                    onsubmit="return confirm('¿Inactivar al usuario {{ $u->name }}?')">
+                @csrf @method('DELETE')
+                <button type="submit" class="btn-action btn-action-danger" title="Inactivar">
+                  <i class="bi bi-archive"></i>
+                </button>
+              </form>
+            @else
+              <form action="{{ route('usuarios.reactivar', $u->id) }}" method="POST" style="display:inline">
+                @csrf
+                <button type="submit" class="btn-action btn-action-success" title="Reactivar">
+                  <i class="bi bi-arrow-counterclockwise"></i>
+                </button>
+              </form>
+            @endif
+          </td>
+        </tr>
+        @empty
+        <tr><td colspan="6" class="text-center py-4 text-muted">No se encontraron usuarios.</td></tr>
+        @endforelse
+      </tbody>
+    </table>
     </div>
+
+    @if($usuarios->hasPages())
+      <div class="mt-3 d-flex justify-content-center">
+        {{ $usuarios->withQueryString()->links() }}
+      </div>
+    @endif
+
+  </div>
 </div>
 
-{{-- Paginación --}}
-<div class="mt-3">
-    {{ $usuarios->withQueryString()->links() }}
-</div>
 @endsection

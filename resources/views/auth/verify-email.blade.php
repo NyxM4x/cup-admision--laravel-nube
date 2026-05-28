@@ -1,31 +1,35 @@
 <x-guest-layout>
-    <div class="mb-4 text-sm text-gray-600">
-        {{ __('Thanks for signing up! Before getting started, could you verify your email address by clicking on the link we just emailed to you? If you didn\'t receive the email, we will gladly send you another.') }}
-    </div>
+
+    <h1>Verificar Correo Electrónico</h1>
+    <p class="auth-form-subtitle">
+        Gracias por registrarte. Antes de continuar, por favor verificá
+        tu correo electrónico haciendo click en el enlace que te enviamos.
+        Si no lo recibiste, podemos enviarte uno nuevo.
+    </p>
 
     @if (session('status') == 'verification-link-sent')
-        <div class="mb-4 font-medium text-sm text-green-600">
-            {{ __('A new verification link has been sent to the email address you provided during registration.') }}
+        <div class="auth-success">
+            <i class="bi bi-check-circle me-1"></i>
+            Se envió un nuevo enlace de verificación a tu correo.
         </div>
     @endif
 
-    <div class="mt-4 flex items-center justify-between">
+    <div class="d-flex flex-column gap-2">
         <form method="POST" action="{{ route('verification.send') }}">
             @csrf
-
-            <div>
-                <x-primary-button>
-                    {{ __('Resend Verification Email') }}
-                </x-primary-button>
-            </div>
+            <button type="submit" class="btn-cup">
+                <i class="bi bi-envelope-paper me-2"></i>
+                Reenviar Correo de Verificación
+            </button>
         </form>
 
         <form method="POST" action="{{ route('logout') }}">
             @csrf
-
-            <button type="submit" class="underline text-sm text-gray-600 hover:text-gray-900 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
-                {{ __('Log Out') }}
+            <button type="submit" style="background:none; border:none; color:var(--cup-muted); font-size:0.88rem; cursor:pointer; padding:0.5rem; width:100%;">
+                <i class="bi bi-box-arrow-right me-1"></i>
+                Cerrar Sesión
             </button>
         </form>
     </div>
+
 </x-guest-layout>

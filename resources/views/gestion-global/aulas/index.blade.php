@@ -1,130 +1,163 @@
-<x-app-layout>
-    <x-slot name="header">
-        <div class="flex items-center justify-between">
-            <div>
-                <h2 class="font-semibold text-xl text-gray-800 leading-tight">Gestión de Aulas</h2>
-                <p class="text-sm text-gray-500">Catálogo de aulas disponibles para el CUP</p>
-            </div>
-            <a href="{{ route('aulas.create') }}"
-               class="inline-flex items-center px-4 py-2 bg-indigo-600 text-white text-sm font-semibold rounded-md hover:bg-indigo-700">
-                + Nueva Aula
-            </a>
-        </div>
-    </x-slot>
+@extends('layouts.base')
 
-    <div class="py-8">
-        <div class="max-w-7xl mx-auto sm:px-6 lg:px-8 space-y-4">
+@section('titulo', 'Gestión de Aulas')
 
-            @if (session('success'))
-                <div class="bg-green-100 border border-green-300 text-green-800 px-4 py-3 rounded">{{ session('success') }}</div>
-            @endif
-            @if ($errors->any())
-                <div class="bg-red-100 border border-red-300 text-red-800 px-4 py-3 rounded">
-                    <ul class="list-disc list-inside">
-                        @foreach ($errors->all() as $error)<li>{{ $error }}</li>@endforeach
-                    </ul>
-                </div>
-            @endif
+@section('contenido')
 
-            {{-- Estadísticas --}}
-            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <div class="bg-white shadow-sm rounded-lg p-4">
-                    <div class="text-sm text-gray-500">Aulas activas</div>
-                    <div class="text-2xl font-bold text-gray-800">{{ number_format($estadisticas['total_activas']) }}</div>
-                </div>
-                <div class="bg-white shadow-sm rounded-lg p-4">
-                    <div class="text-sm text-gray-500">Capacidad total</div>
-                    <div class="text-2xl font-bold text-gray-800">{{ number_format($estadisticas['capacidad_total']) }} <span class="text-sm font-normal text-gray-500">estudiantes</span></div>
-                </div>
-                <div class="bg-white shadow-sm rounded-lg p-4">
-                    <div class="text-sm text-gray-500">Edificios</div>
-                    <div class="text-2xl font-bold text-gray-800">{{ number_format($estadisticas['edificios']) }}</div>
-                </div>
-            </div>
+{{-- PAGE HEADER --}}
+<div class="page-header d-flex justify-content-between align-items-start mb-4">
+  <div>
+    <h1><i class="bi bi-door-open me-2"></i>Gestión de Aulas</h1>
+    <p class="page-subtitle">Catálogo de aulas disponibles para el Curso Preuniversitario</p>
+  </div>
+  <a href="{{ route('aulas.create') }}" class="btn btn-cup-primary">
+    <i class="bi bi-plus-circle me-1"></i> Nueva Aula
+  </a>
+</div>
 
-            {{-- Filtros --}}
-            <form method="GET" action="{{ route('aulas.index') }}" class="bg-white shadow-sm sm:rounded-lg p-4 flex flex-wrap items-end gap-3">
-                <div class="flex-1 min-w-[200px]">
-                    <label class="block text-sm text-gray-600 mb-1">Buscar</label>
-                    <input type="text" name="q" value="{{ $q }}" placeholder="Buscar por código, edificio o equipamiento..."
-                           class="border-gray-300 rounded-md shadow-sm w-full">
-                </div>
-                <div>
-                    <label class="block text-sm text-gray-600 mb-1">Edificio</label>
-                    <select name="edificio" onchange="this.form.submit()" class="border-gray-300 rounded-md shadow-sm">
-                        <option value="">Todos los edificios</option>
-                        @foreach ($edificios as $ed)
-                            <option value="{{ $ed }}" @selected($edificio === $ed)>{{ $ed }}</option>
-                        @endforeach
-                    </select>
-                </div>
-                <div>
-                    <label class="block text-sm text-gray-600 mb-1">Estado</label>
-                    <select name="estado" onchange="this.form.submit()" class="border-gray-300 rounded-md shadow-sm">
-                        <option value="activos"   @selected($estado === 'activos')>Activas</option>
-                        <option value="inactivos" @selected($estado === 'inactivos')>Inactivas</option>
-                        <option value="todos"     @selected($estado === 'todos')>Todas</option>
-                    </select>
-                </div>
-                <button type="submit" class="px-4 py-2 bg-gray-700 text-white text-sm font-semibold rounded-md hover:bg-gray-800">Filtrar</button>
-                <a href="{{ route('aulas.index') }}" class="px-4 py-2 bg-gray-200 text-gray-700 text-sm font-semibold rounded-md hover:bg-gray-300">Limpiar</a>
-            </form>
+{{-- ALERTAS --}}
+@if(session('success'))
+  <div class="alert alert-cup-success alert-dismissible fade show" role="alert">
+    <i class="bi bi-check-circle me-2"></i>{{ session('success') }}
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+  </div>
+@endif
+@if($errors->any())
+  <div class="alert alert-cup-danger">
+    <i class="bi bi-exclamation-triangle me-2"></i>
+    @foreach($errors->all() as $error)<div>{{ $error }}</div>@endforeach
+  </div>
+@endif
 
-            {{-- Tabla --}}
-            <div class="bg-white shadow-sm sm:rounded-lg overflow-x-auto">
-                <table class="min-w-full divide-y divide-gray-200">
-                    <thead class="bg-gray-50">
-                        <tr>
-                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Código</th>
-                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Edificio</th>
-                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Capacidad</th>
-                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Equipamiento</th>
-                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Estado</th>
-                            <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Acciones</th>
-                        </tr>
-                    </thead>
-                    <tbody class="divide-y divide-gray-200">
-                        @forelse ($aulas as $aula)
-                            <tr>
-                                <td class="px-4 py-3 text-sm">
-                                    <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800">{{ $aula->codigo }}</span>
-                                </td>
-                                <td class="px-4 py-3 text-sm text-gray-700">{{ $aula->edificio }}</td>
-                                <td class="px-4 py-3 text-sm text-gray-700">{{ $aula->capacidad }} <span class="text-gray-400">estudiantes</span></td>
-                                <td class="px-4 py-3 text-sm text-gray-700">{{ Str::limit($aula->equipamiento, 60) ?: '—' }}</td>
-                                <td class="px-4 py-3 text-sm">
-                                    @if ($aula->activo)
-                                        <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">Activa</span>
-                                    @else
-                                        <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-800">Inactiva</span>
-                                    @endif
-                                </td>
-                                <td class="px-4 py-3 text-sm text-right space-x-1 whitespace-nowrap">
-                                    <a href="{{ route('aulas.edit', $aula->id) }}"
-                                       class="inline-flex px-3 py-1 bg-amber-500 text-white text-xs rounded hover:bg-amber-600">Editar</a>
-                                    @if ($aula->activo)
-                                        <form method="POST" action="{{ route('aulas.destroy', $aula->id) }}" class="inline"
-                                              onsubmit="return confirm('¿Inactivar el aula {{ $aula->codigo }}?');">
-                                            @csrf
-                                            @method('DELETE')
-                                            <button type="submit" class="inline-flex px-3 py-1 bg-red-600 text-white text-xs rounded hover:bg-red-700">Inactivar</button>
-                                        </form>
-                                    @else
-                                        <form method="POST" action="{{ route('aulas.reactivar', $aula->id) }}" class="inline">
-                                            @csrf
-                                            <button type="submit" class="inline-flex px-3 py-1 bg-green-600 text-white text-xs rounded hover:bg-green-700">Reactivar</button>
-                                        </form>
-                                    @endif
-                                </td>
-                            </tr>
-                        @empty
-                            <tr><td colspan="6" class="px-4 py-6 text-center text-sm text-gray-500">No se encontraron aulas.</td></tr>
-                        @endforelse
-                    </tbody>
-                </table>
-            </div>
-
-            <div>{{ $aulas->links() }}</div>
-        </div>
+{{-- TARJETAS KPI --}}
+<div class="row g-3 mb-4">
+  <div class="col-md-4">
+    <div class="kpi-card kpi-primary">
+      <div class="kpi-icon"><i class="bi bi-door-open-fill"></i></div>
+      <div class="kpi-value">{{ $estadisticas['total_activas'] ?? 0 }}</div>
+      <div class="kpi-label">Aulas Activas</div>
     </div>
-</x-app-layout>
+  </div>
+  <div class="col-md-4">
+    <div class="kpi-card kpi-success">
+      <div class="kpi-icon"><i class="bi bi-people-fill"></i></div>
+      <div class="kpi-value">{{ $estadisticas['capacidad_total'] ?? 0 }}</div>
+      <div class="kpi-label">Capacidad Total (estudiantes)</div>
+    </div>
+  </div>
+  <div class="col-md-4">
+    <div class="kpi-card kpi-accent">
+      <div class="kpi-icon"><i class="bi bi-building"></i></div>
+      <div class="kpi-value">{{ $estadisticas['edificios'] ?? 0 }}</div>
+      <div class="kpi-label">Edificios</div>
+    </div>
+  </div>
+</div>
+
+{{-- FILTROS + TABLA EN UN PANEL --}}
+<div class="panel-cup">
+  <div class="panel-cup-header">
+    <strong><i class="bi bi-funnel me-1"></i> Filtros</strong>
+    <a href="{{ route('aulas.index') }}" class="btn btn-sm btn-outline-secondary">
+      <i class="bi bi-x-circle me-1"></i> Limpiar
+    </a>
+  </div>
+  <div class="panel-cup-body">
+
+    <form method="GET" action="{{ route('aulas.index') }}" class="row g-3 mb-4">
+      <div class="col-md-5">
+        <label class="form-label small text-muted">Buscar</label>
+        <input type="text" name="q" value="{{ $q ?? '' }}" class="form-control"
+               placeholder="Buscar por código, edificio o equipamiento...">
+      </div>
+      <div class="col-md-3">
+        <label class="form-label small text-muted">Edificio</label>
+        <select name="edificio" class="form-select" onchange="this.form.submit()">
+          <option value="">Todos los edificios</option>
+          @foreach(($edificios ?? []) as $ed)
+            <option value="{{ $ed }}" {{ ($edificio ?? '') === $ed ? 'selected' : '' }}>{{ $ed }}</option>
+          @endforeach
+        </select>
+      </div>
+      <div class="col-md-2">
+        <label class="form-label small text-muted">Estado</label>
+        <select name="estado" class="form-select" onchange="this.form.submit()">
+          <option value="activos"   {{ ($estado ?? '') === 'activos'   ? 'selected' : '' }}>Activas</option>
+          <option value="inactivos" {{ ($estado ?? '') === 'inactivos' ? 'selected' : '' }}>Inactivas</option>
+          <option value="todos"     {{ ($estado ?? '') === 'todos'     ? 'selected' : '' }}>Todas</option>
+        </select>
+      </div>
+      <div class="col-md-2 d-flex align-items-end">
+        <button type="submit" class="btn btn-cup-primary w-100">
+          <i class="bi bi-search me-1"></i> Filtrar
+        </button>
+      </div>
+    </form>
+
+    <div class="table-responsive">
+    <table class="table-cup table mb-0">
+      <thead>
+        <tr>
+          <th>Código</th>
+          <th>Edificio</th>
+          <th>Capacidad</th>
+          <th>Equipamiento</th>
+          <th>Estado</th>
+          <th class="text-end">Acciones</th>
+        </tr>
+      </thead>
+      <tbody>
+        @forelse($aulas as $aula)
+        <tr>
+          <td><strong>{{ $aula->codigo }}</strong></td>
+          <td>{{ $aula->edificio }}</td>
+          <td>{{ $aula->capacidad }} <small class="text-muted">estudiantes</small></td>
+          <td><small>{{ Str::limit($aula->equipamiento, 60) }}</small></td>
+          <td>
+            @if($aula->activo)
+              <span class="badge-cup badge-activo">Activa</span>
+            @else
+              <span class="badge-cup badge-inactivo">Inactiva</span>
+            @endif
+          </td>
+          <td class="text-end">
+            <a href="{{ route('aulas.edit', $aula->id) }}"
+               class="btn-action btn-action-edit" title="Editar">
+              <i class="bi bi-pencil"></i>
+            </a>
+            @if($aula->activo)
+              <form action="{{ route('aulas.destroy', $aula->id) }}" method="POST"
+                    style="display:inline" onsubmit="return confirm('¿Inactivar esta aula?')">
+                @csrf @method('DELETE')
+                <button type="submit" class="btn-action btn-action-danger" title="Inactivar">
+                  <i class="bi bi-archive"></i>
+                </button>
+              </form>
+            @else
+              <form action="{{ route('aulas.reactivar', $aula->id) }}" method="POST"
+                    style="display:inline">
+                @csrf
+                <button type="submit" class="btn-action btn-action-success" title="Reactivar">
+                  <i class="bi bi-arrow-counterclockwise"></i>
+                </button>
+              </form>
+            @endif
+          </td>
+        </tr>
+        @empty
+        <tr><td colspan="6" class="text-center py-4 text-muted">No se encontraron aulas con esos filtros.</td></tr>
+        @endforelse
+      </tbody>
+    </table>
+    </div>
+
+    @if($aulas->hasPages())
+      <div class="mt-3 d-flex justify-content-center">
+        {{ $aulas->links() }}
+      </div>
+    @endif
+
+  </div>
+</div>
+
+@endsection
