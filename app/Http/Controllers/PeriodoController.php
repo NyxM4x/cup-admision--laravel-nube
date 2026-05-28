@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Domain\Bitacora\Services\BitacoraLogger;
 use App\Models\Periodo;
 use Illuminate\Http\Request;
 
@@ -35,16 +36,32 @@ class PeriodoController extends Controller
             Periodo::where('activo', true)->update(['activo' => false]);
         }
 
-        Periodo::create([
-            'fecha_ini_inscripcion' => $request->fecha_ini_inscripcion,
-            'fecha_fin_inscripcion' => $request->fecha_fin_inscripcion,
-            'fecha_ini_curso'       => $request->fecha_ini_curso,
-            'fecha_fin_curso'       => $request->fecha_fin_curso,
-            'activo'                => $request->has('activo'),
-        ]);
+        try {
+            $periodo = Periodo::create([
+                'fecha_ini_inscripcion' => $request->fecha_ini_inscripcion,
+                'fecha_fin_inscripcion' => $request->fecha_fin_inscripcion,
+                'fecha_ini_curso'       => $request->fecha_ini_curso,
+                'fecha_fin_curso'       => $request->fecha_fin_curso,
+                'activo'                => $request->has('activo'),
+            ]);
 
-        return redirect()->route('periodos.index')
-            ->with('success', 'Periodo creado correctamente.');
+            BitacoraLogger::registrar(
+                'CREAR',
+                'PeriodoAcademico',
+                'Periodo creado ID='.$periodo->id.' fechas: '.$periodo->fecha_ini_inscripcion.' - '.$periodo->fecha_fin_curso
+            );
+
+            return redirect()->route('periodos.index')
+                ->with('success', 'Periodo creado correctamente.');
+        } catch (\Throwable $e) {
+            BitacoraLogger::registrar(
+                'ERROR_CREAR',
+                'PeriodoAcademico',
+                'Error al crear periodo: '.$e->getMessage()
+            );
+
+            throw $e;
+        }
     }
 
     // Mostrar formulario de edición
@@ -63,27 +80,78 @@ class PeriodoController extends Controller
             'fecha_fin_curso'       => 'required|date|after:fecha_ini_curso',
         ]);
 
-        if ($request->has('activo')) {
-            Periodo::where('activo', true)->update(['activo' => false]);
+        try {
+            $periodoAnteriorActivo = $periodo->activo;
+
+            if ($request->has('activo')) {
+                Periodo::where('activo', true)->where('id', '!=', $periodo->id)->update(['activo' => false]);
+            }
+
+            $periodo->update([
+                'fecha_ini_inscripcion' => $request->fecha_ini_inscripcion,
+                'fecha_fin_inscripcion' => $request->fecha_fin_inscripcion,
+                'fecha_ini_curso'       => $request->fecha_ini_curso,
+                'fecha_fin_curso'       => $request->fecha_fin_curso,
+                'activo'                => $request->has('activo'),
+            ]);
+
+            BitacoraLogger::registrar(
+                'EDITAR',
+                'PeriodoAcademico',
+                'Periodo editado ID='.$periodo->id.' fechas: '.$periodo->fecha_ini_inscripcion.' - '.$periodo->fecha_fin_curso
+            );
+
+            if (! $periodoAnteriorActivo && $periodo->activo) {
+                BitacoraLogger::registrar(
+                    'ACTIVAR',
+                    'PeriodoAcademico',
+                    'Periodo activado ID='.$periodo->id
+                );
+            }
+
+            if ($periodoAnteriorActivo && ! $periodo->activo) {
+                BitacoraLogger::registrar(
+                    'DESACTIVAR',
+                    'PeriodoAcademico',
+                    'Periodo desactivado ID='.$periodo->id
+                );
+            }
+
+            return redirect()->route('periodos.index')
+                ->with('success', 'Periodo actualizado correctamente.');
+        } catch (\Throwable $e) {
+            BitacoraLogger::registrar(
+                'ERROR_EDITAR',
+                'PeriodoAcademico',
+                'Error al editar periodo ID='.$periodo->id.': '.$e->getMessage()
+            );
+
+            throw $e;
         }
-
-        $periodo->update([
-            'fecha_ini_inscripcion' => $request->fecha_ini_inscripcion,
-            'fecha_fin_inscripcion' => $request->fecha_fin_inscripcion,
-            'fecha_ini_curso'       => $request->fecha_ini_curso,
-            'fecha_fin_curso'       => $request->fecha_fin_curso,
-            'activo'                => $request->has('activo'),
-        ]);
-
-        return redirect()->route('periodos.index')
-            ->with('success', 'Periodo actualizado correctamente.');
     }
 
     // Eliminar periodo
     public function destroy(Periodo $periodo)
     {
-        $periodo->delete();
-        return redirect()->route('periodos.index')
-            ->with('success', 'Periodo eliminado correctamente.');
+        try {
+            $periodo->delete();
+
+            BitacoraLogger::registrar(
+                'ELIMINAR',
+                'PeriodoAcademico',
+                'Periodo eliminado ID='.$periodo->id
+            );
+
+            return redirect()->route('periodos.index')
+                ->with('success', 'Periodo eliminado correctamente.');
+        } catch (\Throwable $e) {
+            BitacoraLogger::registrar(
+                'ERROR_ELIMINAR',
+                'PeriodoAcademico',
+                'Error al eliminar periodo ID='.$periodo->id.': '.$e->getMessage()
+            );
+
+            throw $e;
+        }
     }
 }

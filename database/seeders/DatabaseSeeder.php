@@ -12,6 +12,14 @@ class DatabaseSeeder extends Seeder
     public function run(): void
     {
         // ══════════════════════════════════════
+        // SEEDERS DE ARIANY
+        // ══════════════════════════════════════
+        $this->call([
+            SeguridadSeeder::class,
+            AulasSeeder::class,
+        ]);
+
+        // ══════════════════════════════════════
         // 1. USUARIO ADMINISTRADOR
         // ══════════════════════════════════════
         DB::table('users')->insert([

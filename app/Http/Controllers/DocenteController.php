@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Domain\Bitacora\Services\BitacoraLogger;
 use App\Models\Docente;
 use App\Models\Persona;
 use App\Models\Profesion;
@@ -69,7 +70,7 @@ class DocenteController extends Controller
         }
 
         // 3. Crear Docente
-        Docente::create([
+        $docente = Docente::create([
             'persona_id'         => $persona->id,
             'profesion_id'       => $request->profesion_id,
             'anios_experiencia'  => $request->anios_experiencia,
@@ -77,6 +78,12 @@ class DocenteController extends Controller
             'certif_profesional' => $pathCertProfesional,
             'activo'             => true,
         ]);
+
+        BitacoraLogger::registrar(
+            'CREAR',
+            'Docentes',
+            'Docente creado: '.$persona->nombre.' CI='.$persona->ci.' ID='.$docente->id
+        );
 
         return redirect()->route('docentes.index')
             ->with('success', "Docente '{$persona->nombre}' registrado correctamente.");
@@ -139,6 +146,12 @@ class DocenteController extends Controller
             'certif_profesional' => $pathCertProfesional,
         ]);
 
+        BitacoraLogger::registrar(
+            'EDITAR',
+            'Docentes',
+            'Docente editado: '.$docente->persona->nombre.' ID='.$docente->id
+        );
+
         return redirect()->route('docentes.index')
             ->with('success', "Docente '{$docente->persona->nombre}' actualizado correctamente.");
     }
@@ -146,6 +159,13 @@ class DocenteController extends Controller
     public function destroy(Docente $docente)
     {
         $docente->update(['activo' => false]);
+
+        BitacoraLogger::registrar(
+            'DESACTIVAR',
+            'Docentes',
+            'Docente desactivado: '.$docente->persona->nombre.' ID='.$docente->id
+        );
+
         return redirect()->route('docentes.index')
             ->with('success', "Docente '{$docente->persona->nombre}' desactivado.");
     }
@@ -153,6 +173,13 @@ class DocenteController extends Controller
     public function reactivar(Docente $docente)
     {
         $docente->update(['activo' => true]);
+
+        BitacoraLogger::registrar(
+            'ACTIVAR',
+            'Docentes',
+            'Docente reactivado: '.$docente->persona->nombre.' ID='.$docente->id
+        );
+
         return redirect()->route('docentes.index')
             ->with('success', "Docente '{$docente->persona->nombre}' reactivado.");
     }

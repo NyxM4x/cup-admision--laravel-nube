@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Domain\Bitacora\Services\BitacoraLogger;
 use App\Models\Materia;
 use Illuminate\Http\Request;
 
@@ -37,7 +38,7 @@ class MateriaController extends Controller
                 ->withInput();
         }
 
-        Materia::create([
+        $materia = Materia::create([
             'sigla'        => strtoupper($request->sigla),
             'nombre'       => $request->nombre,
             'dias'         => $request->dias,
@@ -47,6 +48,12 @@ class MateriaController extends Controller
             'peso_examen3' => $request->peso_examen3,
             'activo'       => true,
         ]);
+
+        BitacoraLogger::registrar(
+            'CREAR',
+            'Materias',
+            'Materia creada: '.$materia->nombre.' (sigla: '.$materia->sigla.')'
+        );
 
         return redirect()->route('materias.index')
             ->with('success', 'Materia registrada correctamente.');
@@ -84,6 +91,12 @@ class MateriaController extends Controller
             'peso_examen3' => $request->peso_examen3,
         ]);
 
+        BitacoraLogger::registrar(
+            'EDITAR',
+            'Materias',
+            'Materia editada ID='.$materia->id.' nombre='.$materia->nombre
+        );
+
         return redirect()->route('materias.index')
             ->with('success', 'Materia actualizada correctamente.');
     }
@@ -91,6 +104,13 @@ class MateriaController extends Controller
     public function destroy(Materia $materia)
     {
         $materia->update(['activo' => false]);
+
+        BitacoraLogger::registrar(
+            'DESACTIVAR',
+            'Materias',
+            'Materia desactivada: '.$materia->nombre.' ID='.$materia->id
+        );
+
         return redirect()->route('materias.index')
             ->with('success', "Materia '{$materia->nombre}' desactivada.");
     }
@@ -98,6 +118,13 @@ class MateriaController extends Controller
     public function reactivar(Materia $materia)
     {
         $materia->update(['activo' => true]);
+
+        BitacoraLogger::registrar(
+            'ACTIVAR',
+            'Materias',
+            'Materia reactivada: '.$materia->nombre.' ID='.$materia->id
+        );
+
         return redirect()->route('materias.index')
             ->with('success', "Materia '{$materia->nombre}' reactivada.");
     }

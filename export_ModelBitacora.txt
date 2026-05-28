@@ -1,0 +1,32 @@
+﻿<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Model;
+
+class Bitacora extends Model
+{
+    protected $table = 'bitacora';
+
+    // Solo manejamos created_at manualmente, no updated_at
+    public $timestamps = false;
+
+    protected $fillable = [
+        'user_id',
+        'accion',
+        'modulo',
+        'descripcion',
+        'ip',
+        'user_agent',
+    ];
+
+    protected $casts = [
+        'created_at' => 'datetime',
+    ];
+
+    // RelaciÃ³n: un registro de bitÃ¡cora pertenece a un usuario
+    public function user()
+    {
+        return $this->belongsTo(User::class, 'user_id');
+    }
+}

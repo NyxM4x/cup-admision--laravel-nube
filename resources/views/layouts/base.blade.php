@@ -23,6 +23,7 @@
         .nav-section { font-size: .7rem; color: rgba(255,255,255,.45);
             text-transform: uppercase; letter-spacing: .08em;
             padding: .25rem 1rem; margin-top: .25rem; }
+        .dropdown-menu .nav-section { color: #6c757d; }
 
         /* Content */
         .page-content { padding: 1.5rem 0; }
@@ -132,6 +133,64 @@
                     </a>
                 </li>
 
+                {{-- Gestión Global (Aulas) --}}
+                <li class="nav-item">
+                    <a class="nav-link {{ request()->routeIs('aulas.*') ? 'active' : '' }}"
+                       href="{{ route('aulas.index') }}">
+                        <i class="bi bi-door-open me-1"></i>Aulas
+                    </a>
+                </li>
+
+                {{-- Seguridad --}}
+                @auth
+                @if(Auth::user()->tienePermiso('usuarios.ver') || Auth::user()->tienePermiso('roles.ver') || Auth::user()->tienePermiso('permisos.gestionar'))
+                <li class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle
+                        {{ request()->routeIs('usuarios.*','roles.*','permisos.*') ? 'active' : '' }}"
+                       href="#" data-bs-toggle="dropdown">
+                        <i class="bi bi-shield-lock me-1"></i>Seguridad
+                    </a>
+                    <ul class="dropdown-menu">
+                        <li><span class="nav-section">Administración del sistema</span></li>
+                        @if(Auth::user()->tienePermiso('usuarios.ver'))
+                        <li>
+                            <a class="dropdown-item {{ request()->routeIs('usuarios.*') ? 'fw-bold' : '' }}"
+                               href="{{ route('usuarios.index') }}">
+                                <i class="bi bi-people-fill me-2 text-primary"></i>Usuarios
+                            </a>
+                        </li>
+                        @endif
+                        @if(Auth::user()->tienePermiso('roles.ver'))
+                        <li>
+                            <a class="dropdown-item {{ request()->routeIs('roles.*') ? 'fw-bold' : '' }}"
+                               href="{{ route('roles.index') }}">
+                                <i class="bi bi-person-badge me-2 text-success"></i>Roles
+                            </a>
+                        </li>
+                        @endif
+                        @if(Auth::user()->tienePermiso('permisos.gestionar'))
+                        <li>
+                            <a class="dropdown-item {{ request()->routeIs('permisos.*') ? 'fw-bold' : '' }}"
+                               href="{{ route('permisos.index') }}">
+                                <i class="bi bi-key me-2 text-warning"></i>Permisos
+                            </a>
+                        </li>
+                        @endif
+                    </ul>
+                </li>
+                @endif
+
+                {{-- Bitácora --}}
+                @if(Auth::user()->tienePermiso('bitacora.ver'))
+                <li class="nav-item">
+                    <a class="nav-link {{ request()->routeIs('bitacora.*') ? 'active' : '' }}"
+                       href="{{ route('bitacora.index') }}">
+                        <i class="bi bi-journal-text me-1"></i>Bitácora
+                    </a>
+                </li>
+                @endif
+                @endauth
+
             </ul>
 
             {{-- Usuario + Cerrar sesión --}}
@@ -145,11 +204,16 @@
                         </span>
                     </a>
                     <ul class="dropdown-menu dropdown-menu-end">
+                        @auth
                         <li>
-                            <a class="dropdown-item text-muted small disabled" href="#">
-                                <i class="bi bi-envelope me-2"></i>
-                                {{ Auth::check() ? Auth::user()->email : 'admin@ficct.uagrm.edu.bo' }}
-                            </a>
+                            <span class="dropdown-item text-muted small disabled">
+                                <i class="bi bi-envelope me-2"></i>{{ Auth::user()->email }}
+                            </span>
+                        </li>
+                        <li>
+                            <span class="dropdown-item text-muted small disabled">
+                                <i class="bi bi-person-badge me-2"></i>{{ Auth::user()->rol?->nombre ?? 'Sin rol' }}
+                            </span>
                         </li>
                         <li><hr class="dropdown-divider"></li>
                         <li>
@@ -158,7 +222,6 @@
                             </a>
                         </li>
                         <li>
-                            {{-- Cerrar sesión — listo para cuando Ariany integre el login --}}
                             <form method="POST" action="{{ route('logout') }}">
                                 @csrf
                                 <button type="submit" class="dropdown-item text-danger">
@@ -166,6 +229,7 @@
                                 </button>
                             </form>
                         </li>
+                        @endauth
                     </ul>
                 </li>
             </ul>
