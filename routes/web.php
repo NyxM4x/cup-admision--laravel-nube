@@ -41,54 +41,46 @@ Route::middleware('auth')->group(function () {
 require __DIR__.'/auth.php';
 
 // ══════════════════════════════════════════════
-// CU07 — PERIODOS
+// CU07-CU14 — MÓDULOS ACADÉMICOS (requieren autenticación)
 // ══════════════════════════════════════════════
 use App\Http\Controllers\PeriodoController;
-Route::resource('periodos', PeriodoController::class);
-
-// ══════════════════════════════════════════════
-// CU08 — CARRERAS
-// ══════════════════════════════════════════════
 use App\Http\Controllers\CarreraController;
-Route::resource('carreras', CarreraController::class);
-Route::post('carreras/{carrera}/reactivar', [CarreraController::class, 'reactivar'])->name('carreras.reactivar');
-
-// ══════════════════════════════════════════════
-// CU09 — MATERIAS
-// ══════════════════════════════════════════════
 use App\Http\Controllers\MateriaController;
-Route::resource('materias', MateriaController::class);
-Route::post('materias/{materia}/reactivar', [MateriaController::class, 'reactivar'])->name('materias.reactivar');
-
-// ══════════════════════════════════════════════
-// CU11 — REQUISITOS
-// ══════════════════════════════════════════════
 use App\Http\Controllers\RequisitoController;
-Route::resource('requisitos', RequisitoController::class);
-Route::post('requisitos/{requisito}/reactivar', [RequisitoController::class, 'reactivar'])->name('requisitos.reactivar');
-
-// ══════════════════════════════════════════════
-// CU12 — DOCENTES
-// ══════════════════════════════════════════════
 use App\Http\Controllers\DocenteController;
-Route::resource('docentes', DocenteController::class);
-Route::post('docentes/{docente}/reactivar', [DocenteController::class, 'reactivar'])->name('docentes.reactivar');
-
-// ══════════════════════════════════════════════
-// CU13 — POSTULANTES
-// ══════════════════════════════════════════════
 use App\Http\Controllers\PostulanteController;
-Route::resource('postulantes', PostulanteController::class);
-
-// ══════════════════════════════════════════════
-// CU14 — DOCUMENTOS POSTULANTES
-// ══════════════════════════════════════════════
 use App\Http\Controllers\DocumentoPostulanteController;
-Route::get('documentos',                       [DocumentoPostulanteController::class, 'index'])->name('documentos.index');
-Route::get('documentos/{inscripcion}',         [DocumentoPostulanteController::class, 'show'])->name('documentos.show');
-Route::post('documentos/{inscripcion}',        [DocumentoPostulanteController::class, 'store'])->name('documentos.store');
-Route::post('documentos/aprobar/{documento}',  [DocumentoPostulanteController::class, 'aprobar'])->name('documentos.aprobar');
-Route::post('documentos/rechazar/{documento}', [DocumentoPostulanteController::class, 'rechazar'])->name('documentos.rechazar');
+
+Route::middleware('auth')->group(function () {
+    // CU07 — Periodos
+    Route::resource('periodos', PeriodoController::class);
+
+    // CU08 — Carreras
+    Route::resource('carreras', CarreraController::class);
+    Route::post('carreras/{carrera}/reactivar', [CarreraController::class, 'reactivar'])->name('carreras.reactivar');
+
+    // CU09 — Materias
+    Route::resource('materias', MateriaController::class);
+    Route::post('materias/{materia}/reactivar', [MateriaController::class, 'reactivar'])->name('materias.reactivar');
+
+    // CU11 — Requisitos
+    Route::resource('requisitos', RequisitoController::class);
+    Route::post('requisitos/{requisito}/reactivar', [RequisitoController::class, 'reactivar'])->name('requisitos.reactivar');
+
+    // CU12 — Docentes
+    Route::resource('docentes', DocenteController::class);
+    Route::post('docentes/{docente}/reactivar', [DocenteController::class, 'reactivar'])->name('docentes.reactivar');
+
+    // CU13 — Postulantes
+    Route::resource('postulantes', PostulanteController::class);
+
+    // CU14 — Documentos de postulantes
+    Route::get('documentos',                       [DocumentoPostulanteController::class, 'index'])->name('documentos.index');
+    Route::get('documentos/{inscripcion}',         [DocumentoPostulanteController::class, 'show'])->name('documentos.show');
+    Route::post('documentos/{inscripcion}',        [DocumentoPostulanteController::class, 'store'])->name('documentos.store');
+    Route::post('documentos/aprobar/{documento}',  [DocumentoPostulanteController::class, 'aprobar'])->name('documentos.aprobar');
+    Route::post('documentos/rechazar/{documento}', [DocumentoPostulanteController::class, 'rechazar'])->name('documentos.rechazar');
+});
 
 // ══════════════════════════════════════════════
 // CU03/CU04/CU05 — SEGURIDAD (usuarios, roles, permisos)
