@@ -20,11 +20,43 @@
   </div>
 @endif
 
-<x-buscador-cup
-  :q="$q ?? ''"
-  :estado="$estado ?? 'activos'"
-  placeholder="Buscar postulante por nombre, CI o correo..."
-/>
+<form method="GET" class="row g-2 align-items-center mb-3">
+  <div class="col-md-4">
+    <div class="input-group">
+      <span class="input-group-text bg-white">
+        <i class="bi bi-search text-muted"></i>
+      </span>
+      <input type="text" name="q" value="{{ $q ?? '' }}"
+             class="form-control"
+             placeholder="Buscar por nombre, CI o correo...">
+    </div>
+  </div>
+
+  <div class="col-md-3">
+    <select name="periodo_id" class="form-select">
+      <option value="todos" {{ (string)($periodoId ?? '') === 'todos' ? 'selected' : '' }}>Todos los periodos</option>
+      @foreach($periodos as $per)
+        <option value="{{ $per->id }}" {{ (int)($periodoId ?? 0) === (int)$per->id ? 'selected' : '' }}>
+          Periodo #{{ $per->id }} {{ $per->activo ? '(activo)' : '(cerrado)' }}
+        </option>
+      @endforeach
+    </select>
+  </div>
+
+  <div class="col-md-3">
+    <select name="estado" class="form-select">
+      <option value="activos"   {{ ($estado ?? '') === 'activos'   ? 'selected' : '' }}>Activos</option>
+      <option value="inactivos" {{ ($estado ?? '') === 'inactivos' ? 'selected' : '' }}>Inactivos</option>
+      <option value="todos"     {{ ($estado ?? '') === 'todos'     ? 'selected' : '' }}>Todos</option>
+    </select>
+  </div>
+
+  <div class="col-md-2">
+    <button type="submit" class="btn btn-cup-primary w-100">
+      <i class="bi bi-funnel me-1"></i> Filtrar
+    </button>
+  </div>
+</form>
 
 <div class="panel-cup">
   <div class="panel-cup-body p-0">

@@ -4,8 +4,10 @@ namespace App\Http\Controllers;
 
 use App\Domain\Bitacora\Services\BitacoraLogger;
 use App\Models\Periodo;
+use App\Models\Postulante;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 
 class PeriodoController extends Controller
 {
@@ -183,5 +185,33 @@ class PeriodoController extends Controller
         );
 
         return back()->with('success', 'Periodo reactivado correctamente.');
+    }
+
+    // Cerrar periodo: inactiva el periodo + sus postulantes; las inscripciones
+    // quedan intactas como histórico.
+    public function cerrar(Periodo $periodo)
+    {
+        DB::transaction(function () use ($periodo) {
+            $periodo->update(['activo' => false]);
+
+            $postulantesIds = DB::table('inscripciones')
+                ->where('periodo_id', $periodo->id)
+                ->pluck('postulante_id');
+
+            $afectados = Postulante::whereIn('id', $postulantesIds)
+                ->update(['activo' => false]);
+
+            BitacoraLogger::registrar(
+                'PERIODO_CERRADO',
+                'Periodos',
+                "Periodo #{$periodo->id} cerrado. Postulantes inactivados: {$afectados}",
+                Auth::id()
+            );
+        });
+
+        return back()->with('success',
+            'Periodo cerrado correctamente. Los postulantes quedaron inactivos. '
+            .'Las inscripciones se conservan como histórico y pueden reinscribirse en el próximo periodo.'
+        );
     }
 }

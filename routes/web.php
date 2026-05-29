@@ -69,6 +69,7 @@ Route::middleware('auth')->group(function () {
     Route::resource('periodos', PeriodoController::class)->except(['destroy']);
     Route::post('periodos/{periodo}/archivar',  [PeriodoController::class, 'archivar'])->name('periodos.archivar');
     Route::post('periodos/{periodo}/reactivar', [PeriodoController::class, 'reactivar'])->name('periodos.reactivar');
+    Route::post('periodos/{periodo}/cerrar',    [PeriodoController::class, 'cerrar'])->name('periodos.cerrar');
 
     // CU08 — Carreras (sin destroy: solo archivar/reactivar)
     Route::resource('carreras', CarreraController::class)->except(['destroy']);
@@ -90,6 +91,7 @@ Route::middleware('auth')->group(function () {
     Route::post('docentes/{docente}/reactivar', [DocenteController::class, 'reactivar'])->name('docentes.reactivar');
 
     // CU13 — Postulantes
+    Route::post('postulantes/verificar-ci', [PostulanteController::class, 'verificarCI'])->name('postulantes.verificar-ci');
     Route::resource('postulantes', PostulanteController::class);
     Route::post('postulantes/{postulante}/archivar',  [PostulanteController::class, 'archivar'])->name('postulantes.archivar');
     Route::post('postulantes/{postulante}/reactivar', [PostulanteController::class, 'reactivar'])->name('postulantes.reactivar');
