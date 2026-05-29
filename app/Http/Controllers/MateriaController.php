@@ -8,10 +8,29 @@ use Illuminate\Http\Request;
 
 class MateriaController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $materias = Materia::orderBy('nombre')->get();
-        return view('materias.index', compact('materias'));
+        $q = trim($request->input('q', ''));
+        $estado = $request->input('estado', 'activos'); // activos|inactivos|todos
+
+        $query = Materia::orderBy('sigla');
+
+        if ($estado === 'activos') {
+            $query->where('activo', true);
+        } elseif ($estado === 'inactivos') {
+            $query->where('activo', false);
+        }
+
+        if ($q !== '') {
+            $query->where(function ($w) use ($q) {
+                $w->whereRaw('unaccent(sigla) ilike unaccent(?)', ["%{$q}%"])
+                  ->orWhereRaw('unaccent(nombre) ilike unaccent(?)', ["%{$q}%"]);
+            });
+        }
+
+        $materias = $query->paginate(20)->withQueryString();
+
+        return view('materias.index', compact('materias', 'q', 'estado'));
     }
 
     public function create()

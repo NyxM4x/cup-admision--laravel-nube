@@ -9,10 +9,24 @@ use Illuminate\Http\Request;
 class PeriodoController extends Controller
 {
     // Listar todos los periodos
-    public function index()
+    public function index(Request $request)
     {
-        $periodos = Periodo::orderBy('created_at', 'desc')->get();
-        return view('periodos.index', compact('periodos'));
+        $q = trim($request->input('q', ''));
+
+        $query = Periodo::orderBy('created_at', 'desc');
+
+        // Periodos no tiene codigo/nombre: se busca por año o fecha (dd/mm/aaaa)
+        if ($q !== '') {
+            $query->where(function ($w) use ($q) {
+                $w->whereRaw("to_char(fecha_ini_inscripcion, 'DD/MM/YYYY') ilike ?", ["%{$q}%"])
+                  ->orWhereRaw("to_char(fecha_fin_curso, 'DD/MM/YYYY') ilike ?", ["%{$q}%"])
+                  ->orWhereRaw("to_char(fecha_ini_inscripcion, 'YYYY') ilike ?", ["%{$q}%"]);
+            });
+        }
+
+        $periodos = $query->paginate(20)->withQueryString();
+
+        return view('periodos.index', compact('periodos', 'q'));
     }
 
     // Mostrar formulario de creación

@@ -126,18 +126,33 @@
               <i class="bi bi-pencil"></i>
             </a>
             @if($aula->activo)
-              <form action="{{ route('aulas.destroy', $aula->id) }}" method="POST"
-                    style="display:inline" onsubmit="return confirm('¿Inactivar esta aula?')">
+              <form id="form-inactivar-aula-{{ $aula->id }}"
+                    action="{{ route('aulas.destroy', $aula->id) }}" method="POST" style="display:inline">
                 @csrf @method('DELETE')
-                <button type="submit" class="btn-action btn-action-danger" title="Inactivar">
+                <button type="button" class="btn-action btn-action-danger" title="Inactivar"
+                        onclick="cupConfirmar({
+                          titulo: 'Inactivar aula',
+                          mensaje: '¿Querés inactivar el aula {{ addslashes($aula->codigo) }}?',
+                          subtexto: 'No se eliminará; podés reactivarla después.',
+                          textoBoton: 'Sí, inactivar',
+                          tipo: 'warning',
+                          formSelector: '#form-inactivar-aula-{{ $aula->id }}'
+                        })">
                   <i class="bi bi-archive"></i>
                 </button>
               </form>
             @else
-              <form action="{{ route('aulas.reactivar', $aula->id) }}" method="POST"
-                    style="display:inline">
+              <form id="form-reactivar-aula-{{ $aula->id }}"
+                    action="{{ route('aulas.reactivar', $aula->id) }}" method="POST" style="display:inline">
                 @csrf
-                <button type="submit" class="btn-action btn-action-success" title="Reactivar">
+                <button type="button" class="btn-action btn-action-success" title="Reactivar"
+                        onclick="cupConfirmar({
+                          titulo: 'Reactivar aula',
+                          mensaje: '¿Querés reactivar el aula {{ addslashes($aula->codigo) }}?',
+                          textoBoton: 'Sí, reactivar',
+                          tipo: 'success',
+                          formSelector: '#form-reactivar-aula-{{ $aula->id }}'
+                        })">
                   <i class="bi bi-arrow-counterclockwise"></i>
                 </button>
               </form>

@@ -14,6 +14,12 @@
   </a>
 </div>
 
+<x-buscador-cup
+  :q="$q ?? ''"
+  :mostrarEstado="false"
+  placeholder="Buscar por año o fecha (dd/mm/aaaa)..."
+/>
+
 <div class="panel-cup">
   <div class="panel-cup-body p-0">
     <div class="table-responsive">
@@ -32,7 +38,7 @@
       <tbody>
         @forelse($periodos as $periodo)
           <tr>
-            <td>{{ $loop->iteration }}</td>
+            <td>{{ $periodos->firstItem() + $loop->index }}</td>
             <td>{{ $periodo->fecha_ini_inscripcion->format('d/m/Y') }}</td>
             <td>{{ $periodo->fecha_fin_inscripcion->format('d/m/Y') }}</td>
             <td>{{ $periodo->fecha_ini_curso->format('d/m/Y') }}</td>
@@ -48,22 +54,36 @@
               <a href="{{ route('periodos.edit', $periodo) }}" class="btn-action btn-action-edit" title="Editar">
                 <i class="bi bi-pencil"></i>
               </a>
-              <form action="{{ route('periodos.destroy', $periodo) }}" method="POST" style="display:inline"
-                    onsubmit="return confirm('¿Eliminar este periodo?')">
+              <form id="form-eliminar-periodo-{{ $periodo->id }}"
+                    action="{{ route('periodos.destroy', $periodo) }}" method="POST" style="display:inline">
                 @csrf @method('DELETE')
-                <button type="submit" class="btn-action btn-action-danger" title="Eliminar">
+                <button type="button" class="btn-action btn-action-danger" title="Eliminar"
+                        onclick="cupConfirmar({
+                          titulo: 'Eliminar periodo',
+                          mensaje: '¿Querés eliminar este periodo académico?',
+                          subtexto: 'Esta acción no se puede deshacer.',
+                          textoBoton: 'Sí, eliminar',
+                          tipo: 'danger',
+                          formSelector: '#form-eliminar-periodo-{{ $periodo->id }}'
+                        })">
                   <i class="bi bi-trash"></i>
                 </button>
               </form>
             </td>
           </tr>
         @empty
-          <tr><td colspan="7" class="text-center py-4 text-muted">No hay periodos registrados.</td></tr>
+          <tr><td colspan="7" class="text-center py-4 text-muted">No se encontraron periodos.</td></tr>
         @endforelse
       </tbody>
     </table>
     </div>
   </div>
 </div>
+
+@if($periodos->hasPages())
+  <div class="mt-3 d-flex justify-content-center">
+    {{ $periodos->links() }}
+  </div>
+@endif
 
 @endsection

@@ -89,18 +89,34 @@
                     <i class="bi bi-lock"></i>
                   </button>
                 @else
-                  <form action="{{ route('roles.destroy', $rol->id) }}" method="POST" style="display:inline"
-                        onsubmit="return confirm('¿Inactivar el rol {{ $rol->nombre }}?')">
+                  <form id="form-inactivar-rol-{{ $rol->id }}"
+                        action="{{ route('roles.destroy', $rol->id) }}" method="POST" style="display:inline">
                     @csrf @method('DELETE')
-                    <button type="submit" class="btn-action btn-action-danger" title="Inactivar">
+                    <button type="button" class="btn-action btn-action-danger" title="Inactivar"
+                            onclick="cupConfirmar({
+                              titulo: 'Inactivar rol',
+                              mensaje: '¿Querés inactivar el rol {{ addslashes($rol->nombre) }}?',
+                              subtexto: 'Los usuarios con este rol perderán sus permisos asociados.',
+                              textoBoton: 'Sí, inactivar',
+                              tipo: 'danger',
+                              formSelector: '#form-inactivar-rol-{{ $rol->id }}'
+                            })">
                       <i class="bi bi-archive"></i>
                     </button>
                   </form>
                 @endif
               @else
-                <form action="{{ route('roles.reactivar', $rol->id) }}" method="POST" style="display:inline">
+                <form id="form-reactivar-rol-{{ $rol->id }}"
+                      action="{{ route('roles.reactivar', $rol->id) }}" method="POST" style="display:inline">
                   @csrf
-                  <button type="submit" class="btn-action btn-action-success" title="Reactivar">
+                  <button type="button" class="btn-action btn-action-success" title="Reactivar"
+                          onclick="cupConfirmar({
+                            titulo: 'Reactivar rol',
+                            mensaje: '¿Querés reactivar el rol {{ addslashes($rol->nombre) }}?',
+                            textoBoton: 'Sí, reactivar',
+                            tipo: 'success',
+                            formSelector: '#form-reactivar-rol-{{ $rol->id }}'
+                          })">
                     <i class="bi bi-arrow-counterclockwise"></i>
                   </button>
                 </form>
