@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Auth\CambioPasswordObligatorioController;
 use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
 
@@ -33,6 +34,16 @@ Route::middleware('auth')->group(function () {
     Route::get('/profile',    [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile',  [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
+});
+
+// ══════════════════════════════════════════════
+// CAMBIO OBLIGATORIO DE PASSWORD (primer login)
+// ══════════════════════════════════════════════
+Route::middleware('auth')->group(function () {
+    Route::get('/password/cambio-obligatorio', [CambioPasswordObligatorioController::class, 'show'])
+        ->name('password.cambio.form');
+    Route::post('/password/cambio-obligatorio', [CambioPasswordObligatorioController::class, 'update'])
+        ->name('password.cambio.store');
 });
 
 // ══════════════════════════════════════════════

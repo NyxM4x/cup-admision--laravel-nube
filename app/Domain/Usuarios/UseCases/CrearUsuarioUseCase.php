@@ -29,6 +29,7 @@ class CrearUsuarioUseCase
 
         $datos['password'] = Hash::make($datos['password']);
         $datos['activo'] = $datos['activo'] ?? true;
+        $datos['debe_cambiar_password'] = true; // Forzar cambio en primer login (politica de seguridad)
 
         $user = User::create($datos);
         $user->load('rol');
