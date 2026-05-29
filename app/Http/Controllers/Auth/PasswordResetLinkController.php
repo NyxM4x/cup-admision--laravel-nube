@@ -2,11 +2,15 @@
 
 namespace App\Http\Controllers\Auth;
 
+use App\Domain\Bitacora\Services\BitacoraLogger;
 use App\Http\Controllers\Controller;
+use App\Mail\RecuperarPasswordMail;
+use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Password;
-use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 
 class PasswordResetLinkController extends Controller
@@ -21,8 +25,6 @@ class PasswordResetLinkController extends Controller
 
     /**
      * Handle an incoming password reset link request.
-     *
-     * @throws ValidationException
      */
     public function store(Request $request): RedirectResponse
     {
@@ -30,16 +32,43 @@ class PasswordResetLinkController extends Controller
             'email' => ['required', 'email'],
         ]);
 
-        // We will send the password reset link to this user. Once we have attempted
-        // to send the link, we will examine the response then see the message we
-        // need to show to the user. Finally, we'll send out a proper response.
-        $status = Password::sendResetLink(
-            $request->only('email')
-        );
+        $user = User::where('email', $request->email)->first();
 
-        return $status == Password::RESET_LINK_SENT
-                    ? back()->with('status', __($status))
-                    : back()->withInput($request->only('email'))
-                        ->withErrors(['email' => __($status)]);
+        if (! $user) {
+            // Por seguridad NO revelamos si el email existe o no
+            return back()->with('status', 'Si el correo está registrado, te enviaremos un enlace de recuperación.');
+        }
+
+        // Generar token usando el sistema de Laravel
+        $token = Password::createToken($user);
+
+        // URL absoluta para el email
+        $resetUrl = url(route('password.reset', [
+            'token' => $token,
+            'email' => $user->email,
+        ], false));
+
+        // Enviar mail con nuestra plantilla custom
+        try {
+            Mail::to($user->email)->send(new RecuperarPasswordMail(
+                resetUrl: $resetUrl,
+                nombreUsuario: $user->name,
+                emailUsuario: $user->email,
+                minutos: 60,
+            ));
+
+            BitacoraLogger::registrar(
+                'PASSWORD_RESET_SOLICITADO',
+                'Seguridad',
+                'Solicitud de reseteo de password para: '.$user->email,
+                $user->id
+            );
+        } catch (\Exception $e) {
+            Log::error('Error enviando mail de reset: '.$e->getMessage());
+
+            return back()->withErrors(['email' => 'No pudimos enviar el correo. Contactá al administrador.']);
+        }
+
+        return back()->with('status', 'Te enviamos un correo con instrucciones para recuperar tu contraseña. Revisá tu bandeja de entrada.');
     }
 }
