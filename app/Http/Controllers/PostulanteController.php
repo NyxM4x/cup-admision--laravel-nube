@@ -10,27 +10,79 @@ use App\Models\PostulacionCarrera;
 use App\Models\Carrera;
 use App\Models\Periodo;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Schema;
 
 class PostulanteController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
         $periodoActivo = Periodo::where('activo', true)->first();
 
+        $q = trim($request->input('q', ''));
+        $estado = $request->input('estado', 'activos'); // activos|inactivos|todos
+
         // Traer postulantes con su inscripción del periodo activo
-        $postulantes = Postulante::with([
+        $query = Postulante::with([
                 'persona',
-                'inscripciones' => function($q) use ($periodoActivo) {
+                'inscripciones' => function ($q) use ($periodoActivo) {
                     if ($periodoActivo) {
                         $q->where('periodo_id', $periodoActivo->id)
                           ->with('postulacionCarreras.carrera');
                     }
-                }
+                },
             ])
-            ->orderBy('created_at', 'desc')
-            ->get();
+            ->orderBy('created_at', 'desc');
 
-        return view('postulantes.index', compact('postulantes', 'periodoActivo'));
+        // Filtro de estado lógico (si la columna existe)
+        if (Schema::hasColumn('postulantes', 'activo')) {
+            if ($estado === 'activos') {
+                $query->where('activo', true);
+            } elseif ($estado === 'inactivos') {
+                $query->where('activo', false);
+            }
+        }
+
+        // Buscador por nombre, CI o correo de la persona
+        if ($q !== '') {
+            $query->whereHas('persona', function ($w) use ($q) {
+                $w->whereRaw('unaccent(nombre) ilike unaccent(?)', ["%{$q}%"])
+                  ->orWhere('ci', 'ilike', "%{$q}%")
+                  ->orWhereRaw('unaccent(correo) ilike unaccent(?)', ["%{$q}%"]);
+            });
+        }
+
+        $postulantes = $query->paginate(20)->withQueryString();
+
+        return view('postulantes.index', compact('postulantes', 'periodoActivo', 'q', 'estado'));
+    }
+
+    public function archivar(Postulante $postulante)
+    {
+        $postulante->update(['activo' => false]);
+
+        BitacoraLogger::registrar(
+            'POSTULANTE_ARCHIVADO',
+            'Postulantes',
+            "Postulante {$postulante->persona->nombre} archivado (CI: {$postulante->persona->ci})",
+            Auth::id()
+        );
+
+        return back()->with('success', 'Postulante archivado correctamente.');
+    }
+
+    public function reactivar(Postulante $postulante)
+    {
+        $postulante->update(['activo' => true]);
+
+        BitacoraLogger::registrar(
+            'POSTULANTE_REACTIVADO',
+            'Postulantes',
+            "Postulante {$postulante->persona->nombre} reactivado (CI: {$postulante->persona->ci})",
+            Auth::id()
+        );
+
+        return back()->with('success', 'Postulante reactivado correctamente.');
     }
 
     public function create()

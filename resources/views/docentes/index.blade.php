@@ -14,6 +14,12 @@
   </a>
 </div>
 
+<x-buscador-cup
+  :q="$q ?? ''"
+  :estado="$estado ?? 'activos'"
+  placeholder="Buscar docente por nombre, CI o profesión..."
+/>
+
 <div class="panel-cup">
   <div class="panel-cup-body p-0">
     <div class="table-responsive">

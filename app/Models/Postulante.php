@@ -12,6 +12,11 @@ class Postulante extends Model
         'persona_id',
         'colegio',
         'estado',
+        'activo',
+    ];
+
+    protected $casts = [
+        'activo' => 'boolean',
     ];
 
     public function persona()

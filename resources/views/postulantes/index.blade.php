@@ -20,6 +20,12 @@
   </div>
 @endif
 
+<x-buscador-cup
+  :q="$q ?? ''"
+  :estado="$estado ?? 'activos'"
+  placeholder="Buscar postulante por nombre, CI o correo..."
+/>
+
 <div class="panel-cup">
   <div class="panel-cup-body p-0">
     <div class="table-responsive">
@@ -49,8 +55,8 @@
               'reprobado' => 'danger',
             ];
           @endphp
-          <tr>
-            <td>{{ $loop->iteration }}</td>
+          <tr class="{{ ($postulante->activo ?? true) ? '' : 'table-secondary' }}">
+            <td>{{ $postulantes->firstItem() + $loop->index }}</td>
             <td>{{ $postulante->persona->ci }}</td>
             <td><strong>{{ $postulante->persona->nombre }}</strong></td>
             <td>{{ $postulante->colegio }}</td>
@@ -60,6 +66,11 @@
               <span class="badge bg-{{ $badges[$postulante->estado] ?? 'secondary' }}">
                 {{ ucfirst($postulante->estado) }}
               </span>
+              @if(!($postulante->activo ?? true))
+                <span class="badge bg-dark ms-1" title="Inactivo">
+                  <i class="bi bi-archive"></i> Inactivo
+                </span>
+              @endif
             </td>
             <td class="text-end">
               <a href="{{ route('postulantes.show', $postulante) }}" class="btn-action btn-action-view" title="Ver">
@@ -68,15 +79,37 @@
               <a href="{{ route('postulantes.edit', $postulante) }}" class="btn-action btn-action-edit" title="Editar">
                 <i class="bi bi-pencil"></i>
               </a>
+              @if($postulante->activo ?? true)
+                <form method="POST" action="{{ route('postulantes.archivar', $postulante) }}"
+                      class="d-inline" onsubmit="return confirm('¿Archivar este postulante?');">
+                  @csrf
+                  <button type="submit" class="btn-action btn-action-danger" title="Archivar">
+                    <i class="bi bi-archive"></i>
+                  </button>
+                </form>
+              @else
+                <form method="POST" action="{{ route('postulantes.reactivar', $postulante) }}" class="d-inline">
+                  @csrf
+                  <button type="submit" class="btn-action btn-action-success" title="Reactivar">
+                    <i class="bi bi-arrow-counterclockwise"></i>
+                  </button>
+                </form>
+              @endif
             </td>
           </tr>
         @empty
-          <tr><td colspan="8" class="text-center py-4 text-muted">No hay postulantes registrados aún.</td></tr>
+          <tr><td colspan="8" class="text-center py-4 text-muted">No se encontraron postulantes con esos criterios.</td></tr>
         @endforelse
       </tbody>
     </table>
     </div>
   </div>
 </div>
+
+@if($postulantes->hasPages())
+  <div class="mt-3 d-flex justify-content-center">
+    {{ $postulantes->links() }}
+  </div>
+@endif
 
 @endsection

@@ -19,18 +19,28 @@ use Illuminate\Support\Str;
 
 class DocumentoPostulanteController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $inscripciones = Inscripcion::with([
+        $q = trim($request->input('q', ''));
+
+        $query = Inscripcion::with([
                 'postulante.persona',
                 'postulacionCarreras.carrera',
                 'documentos.requisito',
             ])
             ->where('estado', 'activa')
-            ->orderBy('id', 'desc')
-            ->paginate(20);
+            ->orderBy('id', 'desc');
 
-        return view('documentos.index', compact('inscripciones'));
+        if ($q !== '') {
+            $query->whereHas('postulante.persona', function ($w) use ($q) {
+                $w->whereRaw('unaccent(nombre) ilike unaccent(?)', ["%{$q}%"])
+                  ->orWhere('ci', 'ilike', "%{$q}%");
+            });
+        }
+
+        $inscripciones = $query->paginate(20)->withQueryString();
+
+        return view('documentos.index', compact('inscripciones', 'q'));
     }
 
     public function show(Inscripcion $inscripcion)
