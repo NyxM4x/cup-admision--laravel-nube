@@ -6,6 +6,7 @@ use App\Domain\Bitacora\Services\BitacoraLogger;
 use App\Mail\HabilitacionPostulanteMail;
 use App\Models\DocumentoPostulante;
 use App\Models\Inscripcion;
+use App\Models\Periodo;
 use App\Models\Requisito;
 use App\Models\Rol;
 use App\Models\User;
@@ -23,6 +24,10 @@ class DocumentoPostulanteController extends Controller
     {
         $q = trim($request->input('q', ''));
 
+        $periodoActivo = Periodo::where('activo', true)->orderBy('id', 'desc')->first();
+        $periodoId = $request->input('periodo_id', $periodoActivo?->id);
+        $periodos = Periodo::orderBy('id', 'desc')->get();
+
         $query = Inscripcion::with([
                 'postulante.persona',
                 'postulacionCarreras.carrera',
@@ -30,6 +35,10 @@ class DocumentoPostulanteController extends Controller
             ])
             ->where('estado', 'activa')
             ->orderBy('id', 'desc');
+
+        if ($periodoId && $periodoId !== 'todos') {
+            $query->where('periodo_id', $periodoId);
+        }
 
         if ($q !== '') {
             $query->whereHas('postulante.persona', function ($w) use ($q) {
@@ -40,7 +49,7 @@ class DocumentoPostulanteController extends Controller
 
         $inscripciones = $query->paginate(20)->withQueryString();
 
-        return view('documentos.index', compact('inscripciones', 'q'));
+        return view('documentos.index', compact('inscripciones', 'q', 'periodos', 'periodoId'));
     }
 
     public function show(Inscripcion $inscripcion)

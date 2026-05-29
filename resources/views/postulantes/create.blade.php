@@ -134,4 +134,84 @@
   </div>
 </div>
 
+@push('scripts')
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    const ciInput = document.querySelector('input[name="ci"]');
+    if (!ciInput) return;
+
+    ciInput.addEventListener('blur', function () {
+      const ci = this.value.trim();
+      if (ci.length < 4) return;
+
+      fetch('{{ route("postulantes.verificar-ci") }}', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+          'Accept': 'application/json'
+        },
+        body: JSON.stringify({ ci: ci })
+      })
+      .then(r => r.json())
+      .then(data => { if (data.existe) mostrarModalPersonaExistente(data); })
+      .catch(err => console.error('Error verificando CI:', err));
+    });
+  });
+
+  function setVal(name, value) {
+    const el = document.querySelector(`[name="${name}"]`);
+    if (el && value != null && value !== '') el.value = value;
+  }
+
+  function mostrarModalPersonaExistente(data) {
+    const p = data.persona;
+    const postulante = data.postulante;
+    const inscripciones = data.inscripciones || [];
+
+    // Pre-llenar campos con los datos existentes
+    setVal('nombre', p.nombre);
+    setVal('correo', p.correo);
+    setVal('telefono', p.telefono);
+    setVal('direccion', p.direccion);
+    setVal('fecha_nacimiento', p.fecha_nacimiento);
+    if (p.sexo) setVal('sexo', p.sexo);
+
+    const n = inscripciones.length;
+    const plural = n === 1 ? '' : 'es';
+    const subtexto =
+      `Tiene ${n} inscripción${plural} previa${plural}.` +
+      (postulante && !postulante.activo ? ' Su registro está ARCHIVADO (se reactivará).' : '') +
+      ' Si confirmás, se reutilizan sus datos y se crea una nueva inscripción en el periodo activo.';
+
+    cupConfirmar({
+      titulo: 'Persona ya registrada',
+      mensaje: `Encontramos a "${p.nombre}" con CI ${p.ci} en el sistema.`,
+      subtexto: subtexto,
+      textoBoton: 'Sí, crear nueva inscripción',
+      tipo: 'warning',
+      onConfirmar: function () { mostrarBannerReinscripcion(p.nombre, n); }
+    });
+  }
+
+  function mostrarBannerReinscripcion(nombre, cant) {
+    document.getElementById('banner-reinscripcion')?.remove();
+    const plural = cant === 1 ? '' : 'es';
+    const banner = document.createElement('div');
+    banner.id = 'banner-reinscripcion';
+    banner.className = 'alert alert-warning d-flex align-items-center gap-2 mb-3';
+    banner.innerHTML = `
+      <i class="bi bi-info-circle-fill"></i>
+      <div>
+        <strong>Modo reinscripción:</strong>
+        Estás creando una nueva inscripción para <strong>${nombre}</strong>
+        (tiene ${cant} inscripción${plural} previa${plural}).
+        Los datos personales se reutilizarán automáticamente al guardar.
+      </div>`;
+    const form = document.querySelector('form');
+    if (form) form.parentNode.insertBefore(banner, form);
+  }
+</script>
+@endpush
+
 @endsection

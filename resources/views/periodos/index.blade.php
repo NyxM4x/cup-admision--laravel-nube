@@ -55,6 +55,21 @@
                 <i class="bi bi-pencil"></i>
               </a>
               @if($periodo->activo)
+                <form id="form-cerrar-periodo-{{ $periodo->id }}"
+                      action="{{ route('periodos.cerrar', $periodo) }}" method="POST" style="display:inline">
+                  @csrf
+                  <button type="button" class="btn-action btn-action-danger" title="Cerrar periodo"
+                          onclick="cupConfirmar({
+                            titulo: 'Cerrar periodo académico',
+                            mensaje: '¿Querés cerrar este periodo definitivamente?',
+                            subtexto: 'El periodo quedará inactivo y todos sus postulantes serán archivados. Las inscripciones quedan como histórico. Esta acción cierra la gestión actual.',
+                            textoBoton: 'Sí, cerrar periodo',
+                            tipo: 'danger',
+                            formSelector: '#form-cerrar-periodo-{{ $periodo->id }}'
+                          })">
+                    <i class="bi bi-lock-fill"></i>
+                  </button>
+                </form>
                 <form id="form-archivar-periodo-{{ $periodo->id }}"
                       action="{{ route('periodos.archivar', $periodo) }}" method="POST" style="display:inline">
                   @csrf
