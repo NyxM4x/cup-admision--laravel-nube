@@ -59,7 +59,9 @@ class DocumentoPostulanteController extends Controller
             'requisitos.*' => 'boolean',
         ]);
 
-        DB::transaction(function () use ($request, $inscripcion) {
+        $habilitadoAhora = false;
+
+        DB::transaction(function () use ($request, $inscripcion, &$habilitadoAhora) {
             $requisitos = Requisito::where('periodo_id', $inscripcion->periodo_id)->get();
 
             foreach ($requisitos as $req) {
@@ -93,22 +95,28 @@ class DocumentoPostulanteController extends Controller
                 && $obligatorios->count() === $cumplidosObligatorios;
 
             if ($todosCumplidos) {
-                $this->habilitarPostulante($inscripcion);
+                // Retorna true solo si CREÓ el usuario (primera habilitación)
+                $habilitadoAhora = $this->habilitarPostulante($inscripcion);
             }
         });
+
+        if ($habilitadoAhora) {
+            return redirect()->route('documentos.show', $inscripcion)
+                ->with('success', '¡Postulante habilitado! Se generó el usuario y se envió el email con las credenciales.');
+        }
 
         return redirect()->route('documentos.show', $inscripcion)
             ->with('success', 'Documentación actualizada correctamente.');
     }
 
-    protected function habilitarPostulante(Inscripcion $inscripcion): void
+    protected function habilitarPostulante(Inscripcion $inscripcion): bool
     {
         $postulante = $inscripcion->postulante;
         $persona = $postulante->persona;
 
         // Idempotente: si ya tiene usuario, no duplicar ni reenviar
         if (User::where('email', $persona->correo)->exists()) {
-            return;
+            return false;
         }
 
         $passwordTemporal = $this->generarPasswordTemporal();
@@ -143,6 +151,8 @@ class DocumentoPostulanteController extends Controller
             "Postulante {$persona->nombre} habilitado para pago (CI: {$persona->ci})",
             Auth::id()
         );
+
+        return true;
     }
 
     protected function generarPasswordTemporal(): string
