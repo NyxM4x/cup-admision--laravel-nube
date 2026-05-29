@@ -15,7 +15,7 @@ class CarreraController extends Controller
         $periodoActivo = Periodo::where('activo', true)->first();
 
         $q = trim($request->input('q', ''));
-        $estado = $request->input('estado', 'activos'); // activos|inactivos|todos
+        $estado = $request->input('estado', 'todos'); // todos|activos|inactivos
 
         $query = Carrera::with(['cupoActivo'])->orderBy('codigo');
 
@@ -153,53 +153,32 @@ class CarreraController extends Controller
         }
     }
 
-    public function destroy(Carrera $carrera)
+    // Archivar carrera (inactivación lógica — NO se elimina físicamente)
+    public function archivar(Carrera $carrera)
     {
-        try {
-            // Regla CU08: No se puede inactivar con postulantes asociados al periodo activo
-            // Por ahora hacemos soft-delete lógico (inactivar, no borrar)
-            $carrera->update(['activo' => false]);
+        $carrera->update(['activo' => false]);
 
-            BitacoraLogger::registrar(
-                'DESACTIVAR',
-                'Carreras',
-                'Carrera desactivada: '.$carrera->nombre.' ID='.$carrera->id
-            );
+        BitacoraLogger::registrar(
+            'CARRERA_ARCHIVADA',
+            'Carreras',
+            'Carrera archivada: '.$carrera->nombre.' (codigo: '.$carrera->codigo.')'
+        );
 
-            return redirect()->route('carreras.index')
-                ->with('success', "Carrera '{$carrera->nombre}' desactivada correctamente.");
-        } catch (\Throwable $e) {
-            BitacoraLogger::registrar(
-                'ERROR_DESACTIVAR',
-                'Carreras',
-                'Error al desactivar carrera ID='.$carrera->id.': '.$e->getMessage()
-            );
-
-            throw $e;
-        }
+        return redirect()->route('carreras.index')
+            ->with('success', "Carrera '{$carrera->nombre}' archivada correctamente.");
     }
 
     public function reactivar(Carrera $carrera)
     {
-        try {
-            $carrera->update(['activo' => true]);
+        $carrera->update(['activo' => true]);
 
-            BitacoraLogger::registrar(
-                'ACTIVAR',
-                'Carreras',
-                'Carrera reactivada: '.$carrera->nombre.' ID='.$carrera->id
-            );
+        BitacoraLogger::registrar(
+            'CARRERA_REACTIVADA',
+            'Carreras',
+            'Carrera reactivada: '.$carrera->nombre.' (codigo: '.$carrera->codigo.')'
+        );
 
-            return redirect()->route('carreras.index')
-                ->with('success', "Carrera '{$carrera->nombre}' reactivada correctamente.");
-        } catch (\Throwable $e) {
-            BitacoraLogger::registrar(
-                'ERROR_ACTIVAR',
-                'Carreras',
-                'Error al reactivar carrera ID='.$carrera->id.': '.$e->getMessage()
-            );
-
-            throw $e;
-        }
+        return redirect()->route('carreras.index')
+            ->with('success', "Carrera '{$carrera->nombre}' reactivada correctamente.");
     }
 }

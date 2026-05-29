@@ -79,17 +79,17 @@
                 <i class="bi bi-pencil"></i>
               </a>
               @if($carrera->activo)
-                <form id="form-desactivar-carrera-{{ $carrera->id }}"
-                      action="{{ route('carreras.destroy', $carrera) }}" method="POST" style="display:inline">
-                  @csrf @method('DELETE')
-                  <button type="button" class="btn-action btn-action-danger" title="Desactivar"
+                <form id="form-archivar-carrera-{{ $carrera->id }}"
+                      action="{{ route('carreras.archivar', $carrera) }}" method="POST" style="display:inline">
+                  @csrf
+                  <button type="button" class="btn-action btn-action-danger" title="Archivar"
                           onclick="cupConfirmar({
-                            titulo: 'Desactivar carrera',
-                            mensaje: '¿Querés desactivar la carrera {{ addslashes($carrera->nombre) }}?',
-                            subtexto: 'No se eliminará; podés reactivarla después.',
-                            textoBoton: 'Sí, desactivar',
+                            titulo: 'Archivar carrera',
+                            mensaje: '¿Querés archivar la carrera {{ addslashes($carrera->nombre) }}?',
+                            subtexto: 'Quedará inactiva. No se elimina; podés reactivarla después.',
+                            textoBoton: 'Sí, archivar',
                             tipo: 'warning',
-                            formSelector: '#form-desactivar-carrera-{{ $carrera->id }}'
+                            formSelector: '#form-archivar-carrera-{{ $carrera->id }}'
                           })">
                     <i class="bi bi-archive"></i>
                   </button>

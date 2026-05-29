@@ -11,7 +11,7 @@ class MateriaController extends Controller
     public function index(Request $request)
     {
         $q = trim($request->input('q', ''));
-        $estado = $request->input('estado', 'activos'); // activos|inactivos|todos
+        $estado = $request->input('estado', 'todos'); // todos|activos|inactivos
 
         $query = Materia::orderBy('sigla');
 
@@ -117,18 +117,19 @@ class MateriaController extends Controller
             ->with('success', 'Materia actualizada correctamente.');
     }
 
-    public function destroy(Materia $materia)
+    // Archivar materia (inactivación lógica — NO se elimina físicamente)
+    public function archivar(Materia $materia)
     {
         $materia->update(['activo' => false]);
 
         BitacoraLogger::registrar(
-            'DESACTIVAR',
+            'MATERIA_ARCHIVADA',
             'Materias',
-            'Materia desactivada: '.$materia->nombre.' ID='.$materia->id
+            'Materia archivada: '.$materia->nombre.' (sigla: '.$materia->sigla.')'
         );
 
         return redirect()->route('materias.index')
-            ->with('success', "Materia '{$materia->nombre}' desactivada.");
+            ->with('success', "Materia '{$materia->nombre}' archivada.");
     }
 
     public function reactivar(Materia $materia)
@@ -136,9 +137,9 @@ class MateriaController extends Controller
         $materia->update(['activo' => true]);
 
         BitacoraLogger::registrar(
-            'ACTIVAR',
+            'MATERIA_REACTIVADA',
             'Materias',
-            'Materia reactivada: '.$materia->nombre.' ID='.$materia->id
+            'Materia reactivada: '.$materia->nombre.' (sigla: '.$materia->sigla.')'
         );
 
         return redirect()->route('materias.index')
