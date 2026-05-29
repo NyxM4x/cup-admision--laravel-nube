@@ -228,6 +228,31 @@ class DatosDemoSeeder extends Seeder
         });
 
         $this->command->info("   ✓ $totalPostulantes postulantes con inscripción y carreras");
+
+        // ============= REQUISITOS DEMO =============
+        $requisitosDemo = [
+            ['nombre' => 'CI', 'descripcion' => 'Documento de identidad vigente', 'obligatorio' => true],
+            ['nombre' => 'Certificado de notas', 'descripcion' => 'Notas del último año de secundaria', 'obligatorio' => true],
+            ['nombre' => 'Diploma de bachiller', 'descripcion' => 'Diploma o certificado provisional', 'obligatorio' => true],
+            ['nombre' => 'Fotografía', 'descripcion' => '2 fotos fondo blanco tamaño 4x4', 'obligatorio' => true],
+            ['nombre' => 'Boleta de inscripción', 'descripcion' => 'Comprobante de inscripción al CUP', 'obligatorio' => false],
+        ];
+        foreach ($requisitosDemo as $r) {
+            DB::table('requisitos')->updateOrInsert(
+                ['nombre' => $r['nombre'], 'periodo_id' => $periodoId],
+                [
+                    'descripcion'      => $r['descripcion'],
+                    'obligatorio'      => $r['obligatorio'],
+                    'formato_aceptado' => 'PDF,JPG,PNG',
+                    'tamanio_max_kb'   => 2048, // columna real (no tamano_max_mb)
+                    'activo'           => true,
+                    'created_at'       => now(),
+                    'updated_at'       => now(),
+                ]
+            );
+        }
+        $this->command->info('   ✓ 5 requisitos demo');
+
         $this->command->info('🎉 DatosDemoSeeder completo.');
     }
 }

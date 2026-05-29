@@ -36,47 +36,6 @@
       </div>
       <hr>
       <h6 class="mb-3" style="color:var(--cup-primary-light);font-weight:600;">
-        <i class="bi bi-calendar3 me-2"></i>Horario de la materia
-      </h6>
-
-      <div class="mb-3">
-        <label class="form-label">Días de dictado <span class="text-danger">*</span></label>
-        <div class="row g-2">
-          @php
-            $diasOpciones = [
-              'lunes' => 'Lunes', 'martes' => 'Martes', 'miercoles' => 'Miércoles',
-              'jueves' => 'Jueves', 'viernes' => 'Viernes', 'sabado' => 'Sábado',
-            ];
-            $diasActuales = old('dias_dictado', $materia->dias_dictado ?? []);
-          @endphp
-          @foreach($diasOpciones as $key => $label)
-            <div class="col-6 col-md-4">
-              <div class="form-check">
-                <input class="form-check-input" type="checkbox" name="dias_dictado[]" value="{{ $key }}"
-                       id="dia_{{ $key }}" {{ in_array($key, $diasActuales) ? 'checked' : '' }}>
-                <label class="form-check-label" for="dia_{{ $key }}">{{ $label }}</label>
-              </div>
-            </div>
-          @endforeach
-        </div>
-        <small class="text-muted">Marcá los días en los que se dicta esta materia.</small>
-      </div>
-
-      <div class="row g-3 mb-4">
-        <div class="col-md-6">
-          <label class="form-label">Hora de inicio <span class="text-danger">*</span></label>
-          <input type="time" name="hora_inicio" class="form-control"
-                 value="{{ old('hora_inicio', $materia->hora_inicio ? substr($materia->hora_inicio,0,5) : '') }}" required>
-        </div>
-        <div class="col-md-6">
-          <label class="form-label">Hora de fin <span class="text-danger">*</span></label>
-          <input type="time" name="hora_fin" class="form-control"
-                 value="{{ old('hora_fin', $materia->hora_fin ? substr($materia->hora_fin,0,5) : '') }}" required>
-        </div>
-      </div>
-
-      <hr>
-      <h6 class="mb-3" style="color:var(--cup-primary-light);font-weight:600;">
         <i class="bi bi-bar-chart me-2"></i>Pesos de exámenes <small class="text-muted">(deben sumar 100%)</small>
       </h6>
       <div class="row g-3">

@@ -85,12 +85,10 @@ Route::middleware('auth')->group(function () {
     // CU13 — Postulantes
     Route::resource('postulantes', PostulanteController::class);
 
-    // CU14 — Documentos de postulantes
-    Route::get('documentos',                       [DocumentoPostulanteController::class, 'index'])->name('documentos.index');
-    Route::get('documentos/{inscripcion}',         [DocumentoPostulanteController::class, 'show'])->name('documentos.show');
-    Route::post('documentos/{inscripcion}',        [DocumentoPostulanteController::class, 'store'])->name('documentos.store');
-    Route::post('documentos/aprobar/{documento}',  [DocumentoPostulanteController::class, 'aprobar'])->name('documentos.aprobar');
-    Route::post('documentos/rechazar/{documento}', [DocumentoPostulanteController::class, 'rechazar'])->name('documentos.rechazar');
+    // CU14 — Documentos de postulantes (checklist presencial + habilitación)
+    Route::get('documentos',                           [DocumentoPostulanteController::class, 'index'])->name('documentos.index');
+    Route::get('documentos/{inscripcion}',             [DocumentoPostulanteController::class, 'show'])->name('documentos.show');
+    Route::post('documentos/{inscripcion}/actualizar', [DocumentoPostulanteController::class, 'actualizar'])->name('documentos.actualizar');
 });
 
 // ══════════════════════════════════════════════

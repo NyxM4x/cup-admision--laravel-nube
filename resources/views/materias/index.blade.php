@@ -23,8 +23,6 @@
           <th>#</th>
           <th>Sigla</th>
           <th>Nombre</th>
-          <th>Días</th>
-          <th>Horario</th>
           <th class="text-center">Exámenes</th>
           <th class="text-center">Peso E1</th>
           <th class="text-center">Peso E2</th>
@@ -39,8 +37,6 @@
             <td>{{ $loop->iteration }}</td>
             <td><span class="badge-cup badge-modulo">{{ $materia->sigla }}</span></td>
             <td><strong>{{ $materia->nombre }}</strong></td>
-            <td><small class="text-muted">{{ $materia->dias_formateados }}</small></td>
-            <td><small class="text-muted">{{ $materia->horario_formateado }}</small></td>
             <td class="text-center">{{ $materia->cant_examenes }}</td>
             <td class="text-center">{{ $materia->peso_examen1 }}%</td>
             <td class="text-center">{{ $materia->peso_examen2 }}%</td>
@@ -76,7 +72,7 @@
             </td>
           </tr>
         @empty
-          <tr><td colspan="11" class="text-center py-4 text-muted">No hay materias registradas.</td></tr>
+          <tr><td colspan="9" class="text-center py-4 text-muted">No hay materias registradas.</td></tr>
         @endforelse
       </tbody>
     </table>

@@ -15,10 +15,15 @@ class DocumentoPostulante extends Model
         'estado',
         'comentario',
         'fecha_subida',
+        'cumplido',
+        'fecha_validacion',
+        'validado_por',
     ];
 
     protected $casts = [
-        'fecha_subida' => 'datetime',
+        'fecha_subida'     => 'datetime',
+        'cumplido'         => 'boolean',
+        'fecha_validacion' => 'datetime',
     ];
 
     public function inscripcion()

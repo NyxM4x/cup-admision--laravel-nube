@@ -24,10 +24,6 @@ class MateriaController extends Controller
         $request->validate([
             'sigla'           => 'required|string|max:20|unique:materias,sigla',
             'nombre'          => 'required|string|max:100|unique:materias,nombre',
-            'dias_dictado'    => ['required', 'array', 'min:1'],
-            'dias_dictado.*'  => ['in:lunes,martes,miercoles,jueves,viernes,sabado'],
-            'hora_inicio'     => ['required', 'date_format:H:i'],
-            'hora_fin'        => ['required', 'date_format:H:i', 'after:hora_inicio'],
             'peso_examen1'    => 'required|numeric|min:1|max:98',
             'peso_examen2'    => 'required|numeric|min:1|max:98',
             'peso_examen3'    => 'required|numeric|min:1|max:98',
@@ -44,10 +40,7 @@ class MateriaController extends Controller
         $materia = Materia::create([
             'sigla'        => strtoupper($request->sigla),
             'nombre'       => $request->nombre,
-            'dias'         => $this->diasLegacy($request->dias_dictado), // columna legacy NOT NULL
-            'dias_dictado' => $request->dias_dictado,
-            'hora_inicio'  => $request->hora_inicio,
-            'hora_fin'     => $request->hora_fin,
+            'dias'         => 'LMV', // legacy NOT NULL; el horario real ira en el grupo (post 09/06)
             'cant_examenes'=> 3,
             'peso_examen1' => $request->peso_examen1,
             'peso_examen2' => $request->peso_examen2,
@@ -75,10 +68,6 @@ class MateriaController extends Controller
         $request->validate([
             'sigla'           => 'required|string|max:20|unique:materias,sigla,' . $materia->id,
             'nombre'          => 'required|string|max:100|unique:materias,nombre,' . $materia->id,
-            'dias_dictado'    => ['required', 'array', 'min:1'],
-            'dias_dictado.*'  => ['in:lunes,martes,miercoles,jueves,viernes,sabado'],
-            'hora_inicio'     => ['required', 'date_format:H:i'],
-            'hora_fin'        => ['required', 'date_format:H:i', 'after:hora_inicio'],
             'peso_examen1'    => 'required|numeric|min:1|max:98',
             'peso_examen2'    => 'required|numeric|min:1|max:98',
             'peso_examen3'    => 'required|numeric|min:1|max:98',
@@ -94,10 +83,6 @@ class MateriaController extends Controller
         $materia->update([
             'sigla'        => strtoupper($request->sigla),
             'nombre'       => $request->nombre,
-            'dias'         => $this->diasLegacy($request->dias_dictado),
-            'dias_dictado' => $request->dias_dictado,
-            'hora_inicio'  => $request->hora_inicio,
-            'hora_fin'     => $request->hora_fin,
             'peso_examen1' => $request->peso_examen1,
             'peso_examen2' => $request->peso_examen2,
             'peso_examen3' => $request->peso_examen3,
@@ -139,16 +124,5 @@ class MateriaController extends Controller
 
         return redirect()->route('materias.index')
             ->with('success', "Materia '{$materia->nombre}' reactivada.");
-    }
-
-    /**
-     * Deriva el código corto legacy para la columna `dias` (NOT NULL) a partir
-     * de los días estructurados. Ej: [lunes, miercoles, viernes] => "LXV".
-     */
-    private function diasLegacy(array $dias): string
-    {
-        $map = ['lunes' => 'L', 'martes' => 'M', 'miercoles' => 'X', 'jueves' => 'J', 'viernes' => 'V', 'sabado' => 'S'];
-
-        return collect($dias)->map(fn ($d) => $map[$d] ?? '')->join('') ?: '-';
     }
 }
