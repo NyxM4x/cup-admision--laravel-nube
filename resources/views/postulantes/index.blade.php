@@ -80,17 +80,33 @@
                 <i class="bi bi-pencil"></i>
               </a>
               @if($postulante->activo ?? true)
-                <form method="POST" action="{{ route('postulantes.archivar', $postulante) }}"
-                      class="d-inline" onsubmit="return confirm('¿Archivar este postulante?');">
+                <form id="form-archivar-postulante-{{ $postulante->id }}"
+                      method="POST" action="{{ route('postulantes.archivar', $postulante) }}" class="d-inline">
                   @csrf
-                  <button type="submit" class="btn-action btn-action-danger" title="Archivar">
+                  <button type="button" class="btn-action btn-action-danger" title="Archivar"
+                          onclick="cupConfirmar({
+                            titulo: 'Archivar postulante',
+                            mensaje: '¿Querés archivar a {{ addslashes($postulante->persona->nombre) }}?',
+                            subtexto: 'El postulante quedará inactivo pero no se eliminará. Podés reactivarlo después.',
+                            textoBoton: 'Sí, archivar',
+                            tipo: 'warning',
+                            formSelector: '#form-archivar-postulante-{{ $postulante->id }}'
+                          })">
                     <i class="bi bi-archive"></i>
                   </button>
                 </form>
               @else
-                <form method="POST" action="{{ route('postulantes.reactivar', $postulante) }}" class="d-inline">
+                <form id="form-reactivar-postulante-{{ $postulante->id }}"
+                      method="POST" action="{{ route('postulantes.reactivar', $postulante) }}" class="d-inline">
                   @csrf
-                  <button type="submit" class="btn-action btn-action-success" title="Reactivar">
+                  <button type="button" class="btn-action btn-action-success" title="Reactivar"
+                          onclick="cupConfirmar({
+                            titulo: 'Reactivar postulante',
+                            mensaje: '¿Querés reactivar a {{ addslashes($postulante->persona->nombre) }}?',
+                            textoBoton: 'Sí, reactivar',
+                            tipo: 'success',
+                            formSelector: '#form-reactivar-postulante-{{ $postulante->id }}'
+                          })">
                     <i class="bi bi-arrow-counterclockwise"></i>
                   </button>
                 </form>

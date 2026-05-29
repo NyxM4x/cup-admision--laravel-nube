@@ -9,19 +9,26 @@ use Illuminate\Http\Request;
 
 class RequisitoController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
         $periodoActivo = Periodo::where('activo', true)->first();
-        $requisitos = collect();
+        $q = trim($request->input('q', ''));
 
-        if ($periodoActivo) {
-            $requisitos = Requisito::where('periodo_id', $periodoActivo->id)
-                ->orderBy('obligatorio', 'desc')
-                ->orderBy('nombre')
-                ->get();
+        // Solo requisitos del periodo activo; si no hay periodo, paginador vacío
+        $query = Requisito::query()
+            ->when($periodoActivo,
+                fn ($w) => $w->where('periodo_id', $periodoActivo->id),
+                fn ($w) => $w->whereRaw('1 = 0'))
+            ->orderBy('obligatorio', 'desc')
+            ->orderBy('nombre');
+
+        if ($q !== '') {
+            $query->whereRaw('unaccent(nombre) ilike unaccent(?)', ["%{$q}%"]);
         }
 
-        return view('requisitos.index', compact('requisitos', 'periodoActivo'));
+        $requisitos = $query->paginate(20)->withQueryString();
+
+        return view('requisitos.index', compact('requisitos', 'periodoActivo', 'q'));
     }
 
     public function create()

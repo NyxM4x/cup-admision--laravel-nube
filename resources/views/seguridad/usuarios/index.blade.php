@@ -87,17 +87,33 @@
               <i class="bi bi-pencil"></i>
             </a>
             @if($u->activo)
-              <form action="{{ route('usuarios.destroy', $u->id) }}" method="POST" style="display:inline"
-                    onsubmit="return confirm('¿Inactivar al usuario {{ $u->name }}?')">
+              <form id="form-inactivar-usuario-{{ $u->id }}"
+                    action="{{ route('usuarios.destroy', $u->id) }}" method="POST" style="display:inline">
                 @csrf @method('DELETE')
-                <button type="submit" class="btn-action btn-action-danger" title="Inactivar">
+                <button type="button" class="btn-action btn-action-danger" title="Inactivar"
+                        onclick="cupConfirmar({
+                          titulo: 'Inactivar usuario',
+                          mensaje: '¿Querés inactivar al usuario {{ addslashes($u->name) }}?',
+                          subtexto: 'No podrá iniciar sesión hasta que lo reactives.',
+                          textoBoton: 'Sí, inactivar',
+                          tipo: 'danger',
+                          formSelector: '#form-inactivar-usuario-{{ $u->id }}'
+                        })">
                   <i class="bi bi-archive"></i>
                 </button>
               </form>
             @else
-              <form action="{{ route('usuarios.reactivar', $u->id) }}" method="POST" style="display:inline">
+              <form id="form-reactivar-usuario-{{ $u->id }}"
+                    action="{{ route('usuarios.reactivar', $u->id) }}" method="POST" style="display:inline">
                 @csrf
-                <button type="submit" class="btn-action btn-action-success" title="Reactivar">
+                <button type="button" class="btn-action btn-action-success" title="Reactivar"
+                        onclick="cupConfirmar({
+                          titulo: 'Reactivar usuario',
+                          mensaje: '¿Querés reactivar al usuario {{ addslashes($u->name) }}?',
+                          textoBoton: 'Sí, reactivar',
+                          tipo: 'success',
+                          formSelector: '#form-reactivar-usuario-{{ $u->id }}'
+                        })">
                   <i class="bi bi-arrow-counterclockwise"></i>
                 </button>
               </form>

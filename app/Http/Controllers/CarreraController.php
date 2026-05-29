@@ -10,13 +10,31 @@ use Illuminate\Http\Request;
 
 class CarreraController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
         $periodoActivo = Periodo::where('activo', true)->first();
 
-        $carreras = Carrera::with(['cupoActivo'])->orderBy('nombre')->get();
+        $q = trim($request->input('q', ''));
+        $estado = $request->input('estado', 'activos'); // activos|inactivos|todos
 
-        return view('carreras.index', compact('carreras', 'periodoActivo'));
+        $query = Carrera::with(['cupoActivo'])->orderBy('codigo');
+
+        if ($estado === 'activos') {
+            $query->where('activo', true);
+        } elseif ($estado === 'inactivos') {
+            $query->where('activo', false);
+        }
+
+        if ($q !== '') {
+            $query->where(function ($w) use ($q) {
+                $w->whereRaw('unaccent(codigo) ilike unaccent(?)', ["%{$q}%"])
+                  ->orWhereRaw('unaccent(nombre) ilike unaccent(?)', ["%{$q}%"]);
+            });
+        }
+
+        $carreras = $query->paginate(20)->withQueryString();
+
+        return view('carreras.index', compact('carreras', 'periodoActivo', 'q', 'estado'));
     }
 
     public function create()
