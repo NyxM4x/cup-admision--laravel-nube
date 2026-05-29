@@ -11,13 +11,36 @@ use Illuminate\Support\Facades\Storage;
 
 class DocenteController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $docentes = Docente::with('persona', 'profesion')
-            ->orderBy('created_at', 'desc')
-            ->get();
+        $q = trim($request->input('q', ''));
+        $estado = $request->input('estado', 'activos'); // activos|inactivos|todos
 
-        return view('docentes.index', compact('docentes'));
+        $query = Docente::with('persona', 'profesion')
+            ->orderBy('created_at', 'desc');
+
+        // Filtro de estado lógico
+        if ($estado === 'activos') {
+            $query->where('activo', true);
+        } elseif ($estado === 'inactivos') {
+            $query->where('activo', false);
+        }
+
+        // Buscador por nombre, CI o profesión
+        if ($q !== '') {
+            $query->where(function ($w) use ($q) {
+                $w->whereHas('persona', function ($p) use ($q) {
+                    $p->whereRaw('unaccent(nombre) ilike unaccent(?)', ["%{$q}%"])
+                      ->orWhere('ci', 'ilike', "%{$q}%");
+                })->orWhereHas('profesion', function ($p) use ($q) {
+                    $p->whereRaw('unaccent(nombre) ilike unaccent(?)', ["%{$q}%"]);
+                });
+            });
+        }
+
+        $docentes = $query->get();
+
+        return view('docentes.index', compact('docentes', 'q', 'estado'));
     }
 
     public function create()

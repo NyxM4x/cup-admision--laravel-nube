@@ -84,6 +84,8 @@ Route::middleware('auth')->group(function () {
 
     // CU13 — Postulantes
     Route::resource('postulantes', PostulanteController::class);
+    Route::post('postulantes/{postulante}/archivar',  [PostulanteController::class, 'archivar'])->name('postulantes.archivar');
+    Route::post('postulantes/{postulante}/reactivar', [PostulanteController::class, 'reactivar'])->name('postulantes.reactivar');
 
     // CU14 — Documentos de postulantes (checklist presencial + habilitación)
     Route::get('documentos',                           [DocumentoPostulanteController::class, 'index'])->name('documentos.index');

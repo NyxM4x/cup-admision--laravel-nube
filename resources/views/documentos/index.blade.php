@@ -14,6 +14,12 @@
   </p>
 </div>
 
+<x-buscador-cup
+  :q="$q ?? ''"
+  :mostrarEstado="false"
+  placeholder="Buscar postulante por nombre o CI..."
+/>
+
 <div class="panel-cup">
   <div class="panel-cup-body p-0">
     <div class="table-responsive">
