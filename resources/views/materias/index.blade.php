@@ -59,17 +59,17 @@
                 <i class="bi bi-pencil"></i>
               </a>
               @if($materia->activo)
-                <form id="form-desactivar-materia-{{ $materia->id }}"
-                      action="{{ route('materias.destroy', $materia) }}" method="POST" style="display:inline">
-                  @csrf @method('DELETE')
-                  <button type="button" class="btn-action btn-action-danger" title="Desactivar"
+                <form id="form-archivar-materia-{{ $materia->id }}"
+                      action="{{ route('materias.archivar', $materia) }}" method="POST" style="display:inline">
+                  @csrf
+                  <button type="button" class="btn-action btn-action-danger" title="Archivar"
                           onclick="cupConfirmar({
-                            titulo: 'Desactivar materia',
-                            mensaje: '¿Querés desactivar la materia {{ addslashes($materia->nombre) }}?',
-                            subtexto: 'No se eliminará; podés reactivarla después.',
-                            textoBoton: 'Sí, desactivar',
+                            titulo: 'Archivar materia',
+                            mensaje: '¿Querés archivar la materia {{ addslashes($materia->nombre) }}?',
+                            subtexto: 'Quedará inactiva. No se elimina; podés reactivarla después.',
+                            textoBoton: 'Sí, archivar',
                             tipo: 'warning',
-                            formSelector: '#form-desactivar-materia-{{ $materia->id }}'
+                            formSelector: '#form-archivar-materia-{{ $materia->id }}'
                           })">
                     <i class="bi bi-archive"></i>
                   </button>

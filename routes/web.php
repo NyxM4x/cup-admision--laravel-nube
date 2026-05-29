@@ -65,19 +65,24 @@ use App\Http\Controllers\PostulanteController;
 use App\Http\Controllers\DocumentoPostulanteController;
 
 Route::middleware('auth')->group(function () {
-    // CU07 — Periodos
-    Route::resource('periodos', PeriodoController::class);
+    // CU07 — Periodos (sin destroy: solo archivar/reactivar — integridad referencial)
+    Route::resource('periodos', PeriodoController::class)->except(['destroy']);
+    Route::post('periodos/{periodo}/archivar',  [PeriodoController::class, 'archivar'])->name('periodos.archivar');
+    Route::post('periodos/{periodo}/reactivar', [PeriodoController::class, 'reactivar'])->name('periodos.reactivar');
 
-    // CU08 — Carreras
-    Route::resource('carreras', CarreraController::class);
+    // CU08 — Carreras (sin destroy: solo archivar/reactivar)
+    Route::resource('carreras', CarreraController::class)->except(['destroy']);
+    Route::post('carreras/{carrera}/archivar',  [CarreraController::class, 'archivar'])->name('carreras.archivar');
     Route::post('carreras/{carrera}/reactivar', [CarreraController::class, 'reactivar'])->name('carreras.reactivar');
 
-    // CU09 — Materias
-    Route::resource('materias', MateriaController::class);
+    // CU09 — Materias (sin destroy: solo archivar/reactivar)
+    Route::resource('materias', MateriaController::class)->except(['destroy']);
+    Route::post('materias/{materia}/archivar',  [MateriaController::class, 'archivar'])->name('materias.archivar');
     Route::post('materias/{materia}/reactivar', [MateriaController::class, 'reactivar'])->name('materias.reactivar');
 
-    // CU11 — Requisitos
-    Route::resource('requisitos', RequisitoController::class);
+    // CU11 — Requisitos (sin destroy: solo archivar/reactivar)
+    Route::resource('requisitos', RequisitoController::class)->except(['destroy']);
+    Route::post('requisitos/{requisito}/archivar',  [RequisitoController::class, 'archivar'])->name('requisitos.archivar');
     Route::post('requisitos/{requisito}/reactivar', [RequisitoController::class, 'reactivar'])->name('requisitos.reactivar');
 
     // CU12 — Docentes

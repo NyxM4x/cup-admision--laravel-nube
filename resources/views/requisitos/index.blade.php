@@ -28,7 +28,7 @@
 
 <x-buscador-cup
   :q="$q ?? ''"
-  :mostrarEstado="false"
+  :estado="$estado ?? 'todos'"
   placeholder="Buscar por nombre del requisito..."
 />
 
@@ -75,17 +75,17 @@
                 <i class="bi bi-pencil"></i>
               </a>
               @if($req->activo)
-                <form id="form-desactivar-requisito-{{ $req->id }}"
-                      action="{{ route('requisitos.destroy', $req) }}" method="POST" style="display:inline">
-                  @csrf @method('DELETE')
-                  <button type="button" class="btn-action btn-action-danger" title="Desactivar"
+                <form id="form-archivar-requisito-{{ $req->id }}"
+                      action="{{ route('requisitos.archivar', $req) }}" method="POST" style="display:inline">
+                  @csrf
+                  <button type="button" class="btn-action btn-action-danger" title="Archivar"
                           onclick="cupConfirmar({
-                            titulo: 'Desactivar requisito',
-                            mensaje: '¿Querés desactivar el requisito {{ addslashes($req->nombre) }}?',
-                            subtexto: 'No se eliminará; podés reactivarlo después.',
-                            textoBoton: 'Sí, desactivar',
+                            titulo: 'Archivar requisito',
+                            mensaje: '¿Querés archivar el requisito {{ addslashes($req->nombre) }}?',
+                            subtexto: 'Quedará inactivo. No se elimina; podés reactivarlo después.',
+                            textoBoton: 'Sí, archivar',
                             tipo: 'warning',
-                            formSelector: '#form-desactivar-requisito-{{ $req->id }}'
+                            formSelector: '#form-archivar-requisito-{{ $req->id }}'
                           })">
                     <i class="bi bi-archive"></i>
                   </button>
