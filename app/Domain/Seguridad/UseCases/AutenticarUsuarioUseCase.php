@@ -29,13 +29,33 @@ class AutenticarUsuarioUseCase
      */
     public function ejecutar(array $credenciales, bool $remember = false): array
     {
-        // 1. Intento de autenticación
-        if (! Auth::attempt($credenciales, $remember)) {
+        $email = $credenciales['email'] ?? '';
+        $user = User::where('email', $email)->first();
+
+        if ($user && $user->bloqueado_hasta && now()->lessThan($user->bloqueado_hasta)) {
             BitacoraLogger::registrar(
-                'LOGIN_FAIL',
+                'LOGIN_BLOQUEADO',
                 'Seguridad',
-                'Intento fallido con email='.($credenciales['email'] ?? ''),
+                'Intento de login bloqueado por exceso de intentos: '.$email,
+                $user->id,
             );
+
+            return $this->resultado(
+                false,
+                'Tu cuenta está bloqueada por exceso de intentos. Intenta de nuevo en 15 minutos o contacta a un administrador.'
+            );
+        }
+
+        if (! Auth::attempt($credenciales, $remember)) {
+            if ($user) {
+                $this->registrarIntentoFallido($user);
+            } else {
+                BitacoraLogger::registrar(
+                    'LOGIN_FAIL',
+                    'Seguridad',
+                    'Intento fallido con email='.$email,
+                );
+            }
 
             return $this->resultado(false, 'Credenciales incorrectas');
         }
@@ -43,7 +63,6 @@ class AutenticarUsuarioUseCase
         /** @var User $user */
         $user = Auth::user();
 
-        // 2. Usuario inactivo -> cerrar sesión de inmediato
         if (! $user->activo) {
             Auth::logout();
 
@@ -57,7 +76,8 @@ class AutenticarUsuarioUseCase
             return $this->resultado(false, 'Tu cuenta está inactiva. Contactá al administrador.');
         }
 
-        // 3. Login correcto: regenerar sesión (anti session fixation) y registrar
+        $this->restablecerIntentosDeLogin($user);
+
         request()->session()->regenerate();
 
         BitacoraLogger::registrar(
@@ -68,6 +88,43 @@ class AutenticarUsuarioUseCase
         );
 
         return $this->resultado(true, 'Bienvenido', $user, $this->resolverRedirect($user));
+    }
+
+    private function registrarIntentoFallido(User $user): void
+    {
+        $user->failed_logins = ($user->failed_logins ?? 0) + 1;
+
+        if ($user->failed_logins >= 3) {
+            $user->failed_logins = 0;
+            $user->bloqueado_hasta = now()->addMinutes(15);
+            $user->save();
+
+            BitacoraLogger::registrar(
+                'LOGIN_LOCKED',
+                'Seguridad',
+                'Usuario bloqueado por 3 intentos fallidos: '.$user->email,
+                $user->id,
+            );
+
+            return;
+        }
+
+        $user->save();
+        BitacoraLogger::registrar(
+            'LOGIN_FAIL',
+            'Seguridad',
+            'Intento fallido con email='.$user->email,
+            $user->id,
+        );
+    }
+
+    private function restablecerIntentosDeLogin(User $user): void
+    {
+        if ($user->failed_logins > 0 || $user->bloqueado_hasta) {
+            $user->failed_logins = 0;
+            $user->bloqueado_hasta = null;
+            $user->save();
+        }
     }
 
     private function resolverRedirect(User $user): string

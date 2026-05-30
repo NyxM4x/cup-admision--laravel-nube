@@ -375,6 +375,12 @@ class PostulanteController extends Controller
         // Eliminación lógica — cambiar estado
         $postulante->update(['estado' => 'pendiente']);
 
+        BitacoraLogger::registrar(
+            'DESACTIVAR',
+            'Postulantes',
+            'Postulante marcado como pendiente: '.$nombre.' ID='.$postulante->id
+        );
+
         return redirect()->route('postulantes.index')
             ->with('success', "Postulante '{$nombre}' marcado como pendiente.");
     }
