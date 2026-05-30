@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Auth\CambioPasswordObligatorioController;
 use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
 
@@ -7,7 +8,9 @@ use Illuminate\Support\Facades\Route;
 // PÁGINA DE INICIO
 // ══════════════════════════════════════════════
 Route::get('/', function () {
-    return view('welcome');
+    return auth()->check()
+        ? redirect()->route('dashboard')
+        : redirect()->route('login');
 });
 
 // ══════════════════════════════════════════════
@@ -36,59 +39,68 @@ Route::middleware('auth')->group(function () {
 });
 
 // ══════════════════════════════════════════════
+// CAMBIO OBLIGATORIO DE PASSWORD (primer login)
+// ══════════════════════════════════════════════
+Route::middleware('auth')->group(function () {
+    Route::get('/password/cambio-obligatorio', [CambioPasswordObligatorioController::class, 'show'])
+        ->name('password.cambio.form');
+    Route::post('/password/cambio-obligatorio', [CambioPasswordObligatorioController::class, 'update'])
+        ->name('password.cambio.store');
+});
+
+// ══════════════════════════════════════════════
 // AUTENTICACIÓN
 // ══════════════════════════════════════════════
 require __DIR__.'/auth.php';
 
 // ══════════════════════════════════════════════
-// CU07 — PERIODOS
+// CU07-CU14 — MÓDULOS ACADÉMICOS (requieren autenticación)
 // ══════════════════════════════════════════════
 use App\Http\Controllers\PeriodoController;
-Route::resource('periodos', PeriodoController::class);
-
-// ══════════════════════════════════════════════
-// CU08 — CARRERAS
-// ══════════════════════════════════════════════
 use App\Http\Controllers\CarreraController;
-Route::resource('carreras', CarreraController::class);
-Route::post('carreras/{carrera}/reactivar', [CarreraController::class, 'reactivar'])->name('carreras.reactivar');
-
-// ══════════════════════════════════════════════
-// CU09 — MATERIAS
-// ══════════════════════════════════════════════
 use App\Http\Controllers\MateriaController;
-Route::resource('materias', MateriaController::class);
-Route::post('materias/{materia}/reactivar', [MateriaController::class, 'reactivar'])->name('materias.reactivar');
-
-// ══════════════════════════════════════════════
-// CU11 — REQUISITOS
-// ══════════════════════════════════════════════
 use App\Http\Controllers\RequisitoController;
-Route::resource('requisitos', RequisitoController::class);
-Route::post('requisitos/{requisito}/reactivar', [RequisitoController::class, 'reactivar'])->name('requisitos.reactivar');
-
-// ══════════════════════════════════════════════
-// CU12 — DOCENTES
-// ══════════════════════════════════════════════
 use App\Http\Controllers\DocenteController;
-Route::resource('docentes', DocenteController::class);
-Route::post('docentes/{docente}/reactivar', [DocenteController::class, 'reactivar'])->name('docentes.reactivar');
-
-// ══════════════════════════════════════════════
-// CU13 — POSTULANTES
-// ══════════════════════════════════════════════
 use App\Http\Controllers\PostulanteController;
-Route::resource('postulantes', PostulanteController::class);
-
-// ══════════════════════════════════════════════
-// CU14 — DOCUMENTOS POSTULANTES
-// ══════════════════════════════════════════════
 use App\Http\Controllers\DocumentoPostulanteController;
-Route::get('documentos',                       [DocumentoPostulanteController::class, 'index'])->name('documentos.index');
-Route::get('documentos/{inscripcion}',         [DocumentoPostulanteController::class, 'show'])->name('documentos.show');
-Route::post('documentos/{inscripcion}',        [DocumentoPostulanteController::class, 'store'])->name('documentos.store');
-Route::post('documentos/aprobar/{documento}',  [DocumentoPostulanteController::class, 'aprobar'])->name('documentos.aprobar');
-Route::post('documentos/rechazar/{documento}', [DocumentoPostulanteController::class, 'rechazar'])->name('documentos.rechazar');
+
+Route::middleware('auth')->group(function () {
+    // CU07 — Periodos (sin destroy: solo archivar/reactivar — integridad referencial)
+    Route::resource('periodos', PeriodoController::class)->except(['destroy']);
+    Route::post('periodos/{periodo}/archivar',  [PeriodoController::class, 'archivar'])->name('periodos.archivar');
+    Route::post('periodos/{periodo}/reactivar', [PeriodoController::class, 'reactivar'])->name('periodos.reactivar');
+    Route::post('periodos/{periodo}/cerrar',    [PeriodoController::class, 'cerrar'])->name('periodos.cerrar');
+
+    // CU08 — Carreras (sin destroy: solo archivar/reactivar)
+    Route::resource('carreras', CarreraController::class)->except(['destroy']);
+    Route::post('carreras/{carrera}/archivar',  [CarreraController::class, 'archivar'])->name('carreras.archivar');
+    Route::post('carreras/{carrera}/reactivar', [CarreraController::class, 'reactivar'])->name('carreras.reactivar');
+
+    // CU09 — Materias (sin destroy: solo archivar/reactivar)
+    Route::resource('materias', MateriaController::class)->except(['destroy']);
+    Route::post('materias/{materia}/archivar',  [MateriaController::class, 'archivar'])->name('materias.archivar');
+    Route::post('materias/{materia}/reactivar', [MateriaController::class, 'reactivar'])->name('materias.reactivar');
+
+    // CU11 — Requisitos (sin destroy: solo archivar/reactivar)
+    Route::resource('requisitos', RequisitoController::class)->except(['destroy']);
+    Route::post('requisitos/{requisito}/archivar',  [RequisitoController::class, 'archivar'])->name('requisitos.archivar');
+    Route::post('requisitos/{requisito}/reactivar', [RequisitoController::class, 'reactivar'])->name('requisitos.reactivar');
+
+    // CU12 — Docentes
+    Route::resource('docentes', DocenteController::class);
+    Route::post('docentes/{docente}/reactivar', [DocenteController::class, 'reactivar'])->name('docentes.reactivar');
+
+    // CU13 — Postulantes
+    Route::post('postulantes/verificar-ci', [PostulanteController::class, 'verificarCI'])->name('postulantes.verificar-ci');
+    Route::resource('postulantes', PostulanteController::class);
+    Route::post('postulantes/{postulante}/archivar',  [PostulanteController::class, 'archivar'])->name('postulantes.archivar');
+    Route::post('postulantes/{postulante}/reactivar', [PostulanteController::class, 'reactivar'])->name('postulantes.reactivar');
+
+    // CU14 — Documentos de postulantes (checklist presencial + habilitación)
+    Route::get('documentos',                           [DocumentoPostulanteController::class, 'index'])->name('documentos.index');
+    Route::get('documentos/{inscripcion}',             [DocumentoPostulanteController::class, 'show'])->name('documentos.show');
+    Route::post('documentos/{inscripcion}/actualizar', [DocumentoPostulanteController::class, 'actualizar'])->name('documentos.actualizar');
+});
 
 // ══════════════════════════════════════════════
 // CU03/CU04/CU05 — SEGURIDAD (usuarios, roles, permisos)

@@ -34,15 +34,6 @@
         <label class="form-label">Nombre</label>
         <input type="text" name="nombre" class="form-control" value="{{ old('nombre') }}" required maxlength="100">
       </div>
-      <div class="mb-4">
-        <label class="form-label">Días de dictado</label>
-        <select name="dias" class="form-select" required>
-          <option value="">-- Seleccionar --</option>
-          <option value="LMV" {{ old('dias') == 'LMV' ? 'selected' : '' }}>LMV (Lunes, Miércoles, Viernes)</option>
-          <option value="MJ" {{ old('dias') == 'MJ' ? 'selected' : '' }}>MJ (Martes, Jueves)</option>
-        </select>
-      </div>
-
       <hr>
       <h6 class="mb-3" style="color:var(--cup-primary-light);font-weight:600;">
         <i class="bi bi-bar-chart me-2"></i>Pesos de exámenes <small class="text-muted">(deben sumar 100%)</small>

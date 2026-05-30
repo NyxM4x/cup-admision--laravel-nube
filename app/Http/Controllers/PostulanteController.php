@@ -10,27 +10,142 @@ use App\Models\PostulacionCarrera;
 use App\Models\Carrera;
 use App\Models\Periodo;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 class PostulanteController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $periodoActivo = Periodo::where('activo', true)->first();
+        $periodoActivo = Periodo::where('activo', true)->orderBy('id', 'desc')->first();
 
-        // Traer postulantes con su inscripción del periodo activo
-        $postulantes = Postulante::with([
+        $q = trim($request->input('q', ''));
+        $estado = $request->input('estado', 'activos'); // activos|inactivos|todos
+
+        // Periodo: por defecto el activo más reciente; 'todos' = sin filtro
+        $periodoId = $request->input('periodo_id', $periodoActivo?->id);
+        $periodos = Periodo::orderBy('id', 'desc')->get();
+
+        // Cargar la inscripción del periodo filtrado para mostrar carreras correctas
+        $query = Postulante::with([
                 'persona',
-                'inscripciones' => function($q) use ($periodoActivo) {
-                    if ($periodoActivo) {
-                        $q->where('periodo_id', $periodoActivo->id)
-                          ->with('postulacionCarreras.carrera');
+                'inscripciones' => function ($w) use ($periodoId) {
+                    if ($periodoId && $periodoId !== 'todos') {
+                        $w->where('periodo_id', $periodoId);
                     }
-                }
+                    $w->with('postulacionCarreras.carrera', 'periodo');
+                },
             ])
-            ->orderBy('created_at', 'desc')
-            ->get();
+            ->orderBy('created_at', 'desc');
 
-        return view('postulantes.index', compact('postulantes', 'periodoActivo'));
+        // Filtro de estado lógico (si la columna existe)
+        if (Schema::hasColumn('postulantes', 'activo')) {
+            if ($estado === 'activos') {
+                $query->where('activo', true);
+            } elseif ($estado === 'inactivos') {
+                $query->where('activo', false);
+            }
+        }
+
+        // Filtro de periodo (vía inscripciones)
+        if ($periodoId && $periodoId !== 'todos') {
+            $query->whereHas('inscripciones', function ($w) use ($periodoId) {
+                $w->where('periodo_id', $periodoId);
+            });
+        }
+
+        // Buscador por nombre, CI o correo de la persona
+        if ($q !== '') {
+            $query->whereHas('persona', function ($w) use ($q) {
+                $w->whereRaw('unaccent(nombre) ilike unaccent(?)', ["%{$q}%"])
+                  ->orWhere('ci', 'ilike', "%{$q}%")
+                  ->orWhereRaw('unaccent(correo) ilike unaccent(?)', ["%{$q}%"]);
+            });
+        }
+
+        $postulantes = $query->paginate(20)->withQueryString();
+
+        return view('postulantes.index', compact('postulantes', 'periodoActivo', 'q', 'estado', 'periodos', 'periodoId'));
+    }
+
+    // Endpoint AJAX: verifica si el CI ya existe y devuelve datos + inscripciones
+    public function verificarCI(Request $request)
+    {
+        $ci = trim($request->input('ci', ''));
+
+        if (strlen($ci) < 4) {
+            return response()->json(['existe' => false]);
+        }
+
+        $persona = Persona::where('ci', $ci)->first();
+        if (! $persona) {
+            return response()->json(['existe' => false]);
+        }
+
+        $postulante = Postulante::where('persona_id', $persona->id)->first();
+
+        $inscripciones = [];
+        if ($postulante) {
+            $inscripciones = Inscripcion::with('periodo')
+                ->where('postulante_id', $postulante->id)
+                ->orderBy('id', 'desc')
+                ->get()
+                ->map(fn ($i) => [
+                    'id'      => $i->id,
+                    'periodo' => 'Periodo #'.$i->periodo_id
+                                 .($i->periodo ? ' ('.optional($i->periodo->fecha_ini_curso)->format('d/m/Y').')' : ''),
+                    'estado'  => $i->estado,
+                ]);
+        }
+
+        return response()->json([
+            'existe'  => true,
+            'persona' => [
+                'id'               => $persona->id,
+                'ci'               => $persona->ci,
+                'nombre'           => $persona->nombre,
+                'correo'           => $persona->correo,
+                'fecha_nacimiento' => $persona->fecha_nacimiento,
+                'sexo'             => $persona->sexo,
+                'telefono'         => $persona->telefono,
+                'direccion'        => $persona->direccion,
+            ],
+            'postulante' => $postulante ? [
+                'id'      => $postulante->id,
+                'activo'  => $postulante->activo ?? true,
+                'colegio' => $postulante->colegio,
+            ] : null,
+            'inscripciones' => $inscripciones,
+        ]);
+    }
+
+    public function archivar(Postulante $postulante)
+    {
+        $postulante->update(['activo' => false]);
+
+        BitacoraLogger::registrar(
+            'POSTULANTE_ARCHIVADO',
+            'Postulantes',
+            "Postulante {$postulante->persona->nombre} archivado (CI: {$postulante->persona->ci})",
+            Auth::id()
+        );
+
+        return back()->with('success', 'Postulante archivado correctamente.');
+    }
+
+    public function reactivar(Postulante $postulante)
+    {
+        $postulante->update(['activo' => true]);
+
+        BitacoraLogger::registrar(
+            'POSTULANTE_REACTIVADO',
+            'Postulantes',
+            "Postulante {$postulante->persona->nombre} reactivado (CI: {$postulante->persona->ci})",
+            Auth::id()
+        );
+
+        return back()->with('success', 'Postulante reactivado correctamente.');
     }
 
     public function create()
@@ -43,21 +158,15 @@ class PostulanteController extends Controller
 
     public function store(Request $request)
     {
-        $periodoActivo = Periodo::where('activo', true)->first();
-
-        if (!$periodoActivo) {
-            return back()->withErrors(['general' => 'No existe un periodo activo.'])->withInput();
-        }
-
         $request->validate([
-            // Datos Persona
-            'ci'               => 'required|string|max:20|unique:personas,ci',
+            // Datos Persona (ci SIN unique: se permite reinscripción)
+            'ci'               => 'required|string|max:20',
             'nombre'           => 'required|string|max:200',
             'fecha_nacimiento' => 'nullable|date',
             'sexo'             => 'nullable|in:M,F',
             'direccion'        => 'nullable|string|max:255',
             'telefono'         => 'nullable|string|max:20',
-            'correo'           => 'nullable|email|max:150|unique:personas,correo',
+            'correo'           => 'nullable|email|max:150',
             // Datos Postulante
             'colegio'          => 'required|string|max:200',
             // Carreras
@@ -68,58 +177,96 @@ class PostulanteController extends Controller
             'carrera_2.different' => 'La segunda carrera debe ser diferente a la primera.',
         ]);
 
-        // 1. Crear Persona
-        $persona = Persona::create([
-            'ci'               => $request->ci,
-            'nombre'           => $request->nombre,
-            'fecha_nacimiento' => $request->fecha_nacimiento,
-            'sexo'             => $request->sexo,
-            'direccion'        => $request->direccion,
-            'telefono'         => $request->telefono,
-            'correo'           => $request->correo,
-        ]);
-
-        // 2. Crear Postulante
-        $postulante = Postulante::create([
-            'persona_id' => $persona->id,
-            'colegio'    => $request->colegio,
-            'estado'     => 'pendiente',
-        ]);
-
-        // 3. Crear Inscripción
-        $inscripcion = Inscripcion::create([
-            'postulante_id'     => $postulante->id,
-            'periodo_id'        => $periodoActivo->id,
-            'fecha_inscripcion' => now()->toDateString(),
-            'estado'            => 'activa',
-        ]);
-
-        // 4. Crear postulaciones de carrera (prioridad 1 obligatoria, 2 opcional)
-        PostulacionCarrera::create([
-            'inscripcion_id' => $inscripcion->id,
-            'carrera_id'     => $request->carrera_1,
-            'prioridad'      => 1,
-        ]);
-
-        if ($request->filled('carrera_2')) {
-            PostulacionCarrera::create([
-                'inscripcion_id' => $inscripcion->id,
-                'carrera_id'     => $request->carrera_2,
-                'prioridad'      => 2,
+        $periodoActivo = Periodo::where('activo', true)->orderBy('id', 'desc')->first();
+        if (! $periodoActivo) {
+            return back()->withInput()->withErrors([
+                'general' => 'No existe un periodo académico activo. Creá uno antes de inscribir postulantes.',
             ]);
         }
 
-        // 5. Actualizar estado del postulante a inscrito
-        $postulante->update(['estado' => 'inscrito']);
+        // Guard temprano: si la persona ya está inscrita en el periodo activo, no duplicar
+        $personaExistente = Persona::where('ci', $request->ci)->first();
+        if ($personaExistente) {
+            $postExistente = Postulante::where('persona_id', $personaExistente->id)->first();
+            if ($postExistente && Inscripcion::where('postulante_id', $postExistente->id)
+                    ->where('periodo_id', $periodoActivo->id)->exists()) {
+                return back()->withInput()->withErrors([
+                    'ci' => 'Este postulante ya tiene una inscripción en el periodo activo. No se puede duplicar.',
+                ]);
+            }
+        }
 
-        BitacoraLogger::registrar(
-            'REGISTRAR',
-            'Postulantes',
-            'Postulante registrado: '.$persona->nombre.' CI='.$persona->ci.' ID='.$postulante->id
+        $reinscripcion = false;
+
+        DB::transaction(function () use ($request, $periodoActivo, &$reinscripcion) {
+            // 1) Persona: reutilizar si el CI existe, si no crear
+            $persona = Persona::where('ci', $request->ci)->first();
+            if ($persona) {
+                $persona->update([
+                    'nombre'    => $request->nombre,
+                    'correo'    => $request->correo ?: $persona->correo,
+                    'telefono'  => $request->telefono ?: $persona->telefono,
+                    'direccion' => $request->direccion ?: $persona->direccion,
+                ]);
+                $reinscripcion = true;
+            } else {
+                $persona = Persona::create([
+                    'ci'               => $request->ci,
+                    'nombre'           => $request->nombre,
+                    'correo'           => $request->correo,
+                    'fecha_nacimiento' => $request->fecha_nacimiento,
+                    'sexo'             => $request->sexo,
+                    'telefono'         => $request->telefono,
+                    'direccion'        => $request->direccion,
+                ]);
+            }
+
+            // 2) Postulante: reutilizar o crear; reactivar si estaba archivado
+            $postulante = Postulante::firstOrCreate(
+                ['persona_id' => $persona->id],
+                ['colegio' => $request->colegio, 'estado' => 'inscrito', 'activo' => true]
+            );
+            if (! ($postulante->activo ?? true)) {
+                $postulante->update(['activo' => true, 'colegio' => $request->colegio]);
+            }
+
+            // 3) Inscripción al periodo activo
+            $inscripcion = Inscripcion::create([
+                'postulante_id'     => $postulante->id,
+                'periodo_id'        => $periodoActivo->id,
+                'fecha_inscripcion' => now()->toDateString(),
+                'estado'            => 'activa',
+            ]);
+
+            // 4) Postulaciones de carrera
+            PostulacionCarrera::create([
+                'inscripcion_id' => $inscripcion->id,
+                'carrera_id'     => $request->carrera_1,
+                'prioridad'      => 1,
+            ]);
+            if ($request->filled('carrera_2')) {
+                PostulacionCarrera::create([
+                    'inscripcion_id' => $inscripcion->id,
+                    'carrera_id'     => $request->carrera_2,
+                    'prioridad'      => 2,
+                ]);
+            }
+
+            // 5) Bitácora
+            BitacoraLogger::registrar(
+                $reinscripcion ? 'POSTULANTE_REINSCRITO' : 'POSTULANTE_CREADO',
+                'Postulantes',
+                ($reinscripcion ? 'Reinscripción: ' : 'Inscripción nueva: ')
+                    ."{$persona->nombre} (CI {$persona->ci}) al periodo #{$periodoActivo->id}",
+                Auth::id()
+            );
+        });
+
+        return redirect()->route('postulantes.index')->with('success',
+            $reinscripcion
+                ? '¡Reinscripción exitosa! La persona ya existía y se creó una nueva inscripción en el periodo activo.'
+                : 'Postulante registrado e inscrito correctamente.'
         );
-
-        return redirect()->route('postulantes.index')
-            ->with('success', "Postulante '{$persona->nombre}' registrado e inscrito correctamente.");
     }
 
     public function show(Postulante $postulante)

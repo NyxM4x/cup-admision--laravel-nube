@@ -14,6 +14,12 @@
   </a>
 </div>
 
+<x-buscador-cup
+  :q="$q ?? ''"
+  :estado="$estado ?? 'todos'"
+  placeholder="Buscar por año o fecha (dd/mm/aaaa)..."
+/>
+
 <div class="panel-cup">
   <div class="panel-cup-body p-0">
     <div class="table-responsive">
@@ -32,7 +38,7 @@
       <tbody>
         @forelse($periodos as $periodo)
           <tr>
-            <td>{{ $loop->iteration }}</td>
+            <td>{{ $periodos->firstItem() + $loop->index }}</td>
             <td>{{ $periodo->fecha_ini_inscripcion->format('d/m/Y') }}</td>
             <td>{{ $periodo->fecha_fin_inscripcion->format('d/m/Y') }}</td>
             <td>{{ $periodo->fecha_ini_curso->format('d/m/Y') }}</td>
@@ -48,22 +54,69 @@
               <a href="{{ route('periodos.edit', $periodo) }}" class="btn-action btn-action-edit" title="Editar">
                 <i class="bi bi-pencil"></i>
               </a>
-              <form action="{{ route('periodos.destroy', $periodo) }}" method="POST" style="display:inline"
-                    onsubmit="return confirm('¿Eliminar este periodo?')">
-                @csrf @method('DELETE')
-                <button type="submit" class="btn-action btn-action-danger" title="Eliminar">
-                  <i class="bi bi-trash"></i>
-                </button>
-              </form>
+              @if($periodo->activo)
+                <form id="form-cerrar-periodo-{{ $periodo->id }}"
+                      action="{{ route('periodos.cerrar', $periodo) }}" method="POST" style="display:inline">
+                  @csrf
+                  <button type="button" class="btn-action btn-action-danger" title="Cerrar periodo"
+                          onclick="cupConfirmar({
+                            titulo: 'Cerrar periodo académico',
+                            mensaje: '¿Querés cerrar este periodo definitivamente?',
+                            subtexto: 'El periodo quedará inactivo y todos sus postulantes serán archivados. Las inscripciones quedan como histórico. Esta acción cierra la gestión actual.',
+                            textoBoton: 'Sí, cerrar periodo',
+                            tipo: 'danger',
+                            formSelector: '#form-cerrar-periodo-{{ $periodo->id }}'
+                          })">
+                    <i class="bi bi-lock-fill"></i>
+                  </button>
+                </form>
+                <form id="form-archivar-periodo-{{ $periodo->id }}"
+                      action="{{ route('periodos.archivar', $periodo) }}" method="POST" style="display:inline">
+                  @csrf
+                  <button type="button" class="btn-action btn-action-danger" title="Archivar"
+                          onclick="cupConfirmar({
+                            titulo: 'Archivar periodo',
+                            mensaje: '¿Querés archivar este periodo académico?',
+                            subtexto: 'Quedará inactivo. Las inscripciones existentes no se eliminan. Podés reactivarlo después.',
+                            textoBoton: 'Sí, archivar',
+                            tipo: 'warning',
+                            formSelector: '#form-archivar-periodo-{{ $periodo->id }}'
+                          })">
+                    <i class="bi bi-archive"></i>
+                  </button>
+                </form>
+              @else
+                <form id="form-reactivar-periodo-{{ $periodo->id }}"
+                      action="{{ route('periodos.reactivar', $periodo) }}" method="POST" style="display:inline">
+                  @csrf
+                  <button type="button" class="btn-action btn-action-success" title="Reactivar"
+                          onclick="cupConfirmar({
+                            titulo: 'Reactivar periodo',
+                            mensaje: '¿Querés reactivar este periodo académico?',
+                            subtexto: 'Se desactivarán los demás periodos activos (solo puede haber uno activo).',
+                            textoBoton: 'Sí, reactivar',
+                            tipo: 'success',
+                            formSelector: '#form-reactivar-periodo-{{ $periodo->id }}'
+                          })">
+                    <i class="bi bi-arrow-counterclockwise"></i>
+                  </button>
+                </form>
+              @endif
             </td>
           </tr>
         @empty
-          <tr><td colspan="7" class="text-center py-4 text-muted">No hay periodos registrados.</td></tr>
+          <tr><td colspan="7" class="text-center py-4 text-muted">No se encontraron periodos.</td></tr>
         @endforelse
       </tbody>
     </table>
     </div>
   </div>
 </div>
+
+@if($periodos->hasPages())
+  <div class="mt-3 d-flex justify-content-center">
+    {{ $periodos->links() }}
+  </div>
+@endif
 
 @endsection

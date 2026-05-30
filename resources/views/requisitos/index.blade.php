@@ -26,6 +26,12 @@
   </div>
 @endif
 
+<x-buscador-cup
+  :q="$q ?? ''"
+  :estado="$estado ?? 'todos'"
+  placeholder="Buscar por nombre del requisito..."
+/>
+
 <div class="panel-cup">
   <div class="panel-cup-body p-0">
     <div class="table-responsive">
@@ -45,7 +51,7 @@
       <tbody>
         @forelse($requisitos as $req)
           <tr>
-            <td>{{ $loop->iteration }}</td>
+            <td>{{ $requisitos->firstItem() + $loop->index }}</td>
             <td><strong>{{ $req->nombre }}</strong></td>
             <td>{{ $req->descripcion ?? '—' }}</td>
             <td>
@@ -69,17 +75,33 @@
                 <i class="bi bi-pencil"></i>
               </a>
               @if($req->activo)
-                <form action="{{ route('requisitos.destroy', $req) }}" method="POST" style="display:inline"
-                      onsubmit="return confirm('¿Desactivar este requisito?')">
-                  @csrf @method('DELETE')
-                  <button type="submit" class="btn-action btn-action-danger" title="Desactivar">
+                <form id="form-archivar-requisito-{{ $req->id }}"
+                      action="{{ route('requisitos.archivar', $req) }}" method="POST" style="display:inline">
+                  @csrf
+                  <button type="button" class="btn-action btn-action-danger" title="Archivar"
+                          onclick="cupConfirmar({
+                            titulo: 'Archivar requisito',
+                            mensaje: '¿Querés archivar el requisito {{ addslashes($req->nombre) }}?',
+                            subtexto: 'Quedará inactivo. No se elimina; podés reactivarlo después.',
+                            textoBoton: 'Sí, archivar',
+                            tipo: 'warning',
+                            formSelector: '#form-archivar-requisito-{{ $req->id }}'
+                          })">
                     <i class="bi bi-archive"></i>
                   </button>
                 </form>
               @else
-                <form action="{{ route('requisitos.reactivar', $req) }}" method="POST" style="display:inline">
+                <form id="form-reactivar-requisito-{{ $req->id }}"
+                      action="{{ route('requisitos.reactivar', $req) }}" method="POST" style="display:inline">
                   @csrf
-                  <button type="submit" class="btn-action btn-action-success" title="Reactivar">
+                  <button type="button" class="btn-action btn-action-success" title="Reactivar"
+                          onclick="cupConfirmar({
+                            titulo: 'Reactivar requisito',
+                            mensaje: '¿Querés reactivar el requisito {{ addslashes($req->nombre) }}?',
+                            textoBoton: 'Sí, reactivar',
+                            tipo: 'success',
+                            formSelector: '#form-reactivar-requisito-{{ $req->id }}'
+                          })">
                     <i class="bi bi-arrow-counterclockwise"></i>
                   </button>
                 </form>
@@ -87,12 +109,18 @@
             </td>
           </tr>
         @empty
-          <tr><td colspan="8" class="text-center py-4 text-muted">No hay requisitos registrados para este periodo.</td></tr>
+          <tr><td colspan="8" class="text-center py-4 text-muted">No se encontraron requisitos.</td></tr>
         @endforelse
       </tbody>
     </table>
     </div>
   </div>
 </div>
+
+@if($requisitos->hasPages())
+  <div class="mt-3 d-flex justify-content-center">
+    {{ $requisitos->links() }}
+  </div>
+@endif
 
 @endsection

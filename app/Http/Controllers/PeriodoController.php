@@ -4,15 +4,39 @@ namespace App\Http\Controllers;
 
 use App\Domain\Bitacora\Services\BitacoraLogger;
 use App\Models\Periodo;
+use App\Models\Postulante;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 
 class PeriodoController extends Controller
 {
     // Listar todos los periodos
-    public function index()
+    public function index(Request $request)
     {
-        $periodos = Periodo::orderBy('created_at', 'desc')->get();
-        return view('periodos.index', compact('periodos'));
+        $q = trim($request->input('q', ''));
+        $estado = $request->input('estado', 'todos'); // todos|activos|inactivos
+
+        $query = Periodo::orderBy('created_at', 'desc');
+
+        if ($estado === 'activos') {
+            $query->where('activo', true);
+        } elseif ($estado === 'inactivos') {
+            $query->where('activo', false);
+        }
+
+        // Periodos no tiene codigo/nombre: se busca por año o fecha (dd/mm/aaaa)
+        if ($q !== '') {
+            $query->where(function ($w) use ($q) {
+                $w->whereRaw("to_char(fecha_ini_inscripcion, 'DD/MM/YYYY') ilike ?", ["%{$q}%"])
+                  ->orWhereRaw("to_char(fecha_fin_curso, 'DD/MM/YYYY') ilike ?", ["%{$q}%"])
+                  ->orWhereRaw("to_char(fecha_ini_inscripcion, 'YYYY') ilike ?", ["%{$q}%"]);
+            });
+        }
+
+        $periodos = $query->paginate(20)->withQueryString();
+
+        return view('periodos.index', compact('periodos', 'q', 'estado'));
     }
 
     // Mostrar formulario de creación
@@ -130,28 +154,64 @@ class PeriodoController extends Controller
         }
     }
 
-    // Eliminar periodo
-    public function destroy(Periodo $periodo)
+    // Archivar periodo (inactivación lógica — NO se elimina físicamente)
+    public function archivar(Periodo $periodo)
     {
-        try {
-            $periodo->delete();
+        $periodo->update(['activo' => false]);
+
+        BitacoraLogger::registrar(
+            'PERIODO_ARCHIVADO',
+            'PeriodoAcademico',
+            'Periodo #'.$periodo->id.' archivado ('
+                .$periodo->fecha_ini_inscripcion->format('d/m/Y').' - '
+                .$periodo->fecha_fin_curso->format('d/m/Y').')',
+            Auth::id()
+        );
+
+        return back()->with('success', 'Periodo archivado correctamente.');
+    }
+
+    public function reactivar(Periodo $periodo)
+    {
+        // Solo puede haber un periodo activo: desactivar los demás al reactivar
+        Periodo::where('activo', true)->where('id', '!=', $periodo->id)->update(['activo' => false]);
+        $periodo->update(['activo' => true]);
+
+        BitacoraLogger::registrar(
+            'PERIODO_REACTIVADO',
+            'PeriodoAcademico',
+            'Periodo #'.$periodo->id.' reactivado',
+            Auth::id()
+        );
+
+        return back()->with('success', 'Periodo reactivado correctamente.');
+    }
+
+    // Cerrar periodo: inactiva el periodo + sus postulantes; las inscripciones
+    // quedan intactas como histórico.
+    public function cerrar(Periodo $periodo)
+    {
+        DB::transaction(function () use ($periodo) {
+            $periodo->update(['activo' => false]);
+
+            $postulantesIds = DB::table('inscripciones')
+                ->where('periodo_id', $periodo->id)
+                ->pluck('postulante_id');
+
+            $afectados = Postulante::whereIn('id', $postulantesIds)
+                ->update(['activo' => false]);
 
             BitacoraLogger::registrar(
-                'ELIMINAR',
-                'PeriodoAcademico',
-                'Periodo eliminado ID='.$periodo->id
+                'PERIODO_CERRADO',
+                'Periodos',
+                "Periodo #{$periodo->id} cerrado. Postulantes inactivados: {$afectados}",
+                Auth::id()
             );
+        });
 
-            return redirect()->route('periodos.index')
-                ->with('success', 'Periodo eliminado correctamente.');
-        } catch (\Throwable $e) {
-            BitacoraLogger::registrar(
-                'ERROR_ELIMINAR',
-                'PeriodoAcademico',
-                'Error al eliminar periodo ID='.$periodo->id.': '.$e->getMessage()
-            );
-
-            throw $e;
-        }
+        return back()->with('success',
+            'Periodo cerrado correctamente. Los postulantes quedaron inactivos. '
+            .'Las inscripciones se conservan como histórico y pueden reinscribirse en el próximo periodo.'
+        );
     }
 }

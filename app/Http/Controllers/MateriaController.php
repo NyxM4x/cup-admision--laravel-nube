@@ -8,10 +8,29 @@ use Illuminate\Http\Request;
 
 class MateriaController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $materias = Materia::orderBy('nombre')->get();
-        return view('materias.index', compact('materias'));
+        $q = trim($request->input('q', ''));
+        $estado = $request->input('estado', 'todos'); // todos|activos|inactivos
+
+        $query = Materia::orderBy('sigla');
+
+        if ($estado === 'activos') {
+            $query->where('activo', true);
+        } elseif ($estado === 'inactivos') {
+            $query->where('activo', false);
+        }
+
+        if ($q !== '') {
+            $query->where(function ($w) use ($q) {
+                $w->whereRaw('unaccent(sigla) ilike unaccent(?)', ["%{$q}%"])
+                  ->orWhereRaw('unaccent(nombre) ilike unaccent(?)', ["%{$q}%"]);
+            });
+        }
+
+        $materias = $query->paginate(20)->withQueryString();
+
+        return view('materias.index', compact('materias', 'q', 'estado'));
     }
 
     public function create()
@@ -22,12 +41,11 @@ class MateriaController extends Controller
     public function store(Request $request)
     {
         $request->validate([
-            'sigla'         => 'required|string|max:20|unique:materias,sigla',
-            'nombre'        => 'required|string|max:100|unique:materias,nombre',
-            'dias'          => 'required|in:LMV,MJ',
-            'peso_examen1'  => 'required|numeric|min:1|max:98',
-            'peso_examen2'  => 'required|numeric|min:1|max:98',
-            'peso_examen3'  => 'required|numeric|min:1|max:98',
+            'sigla'           => 'required|string|max:20|unique:materias,sigla',
+            'nombre'          => 'required|string|max:100|unique:materias,nombre',
+            'peso_examen1'    => 'required|numeric|min:1|max:98',
+            'peso_examen2'    => 'required|numeric|min:1|max:98',
+            'peso_examen3'    => 'required|numeric|min:1|max:98',
         ]);
 
         // Validar que los pesos sumen 100
@@ -41,7 +59,7 @@ class MateriaController extends Controller
         $materia = Materia::create([
             'sigla'        => strtoupper($request->sigla),
             'nombre'       => $request->nombre,
-            'dias'         => $request->dias,
+            'dias'         => 'LMV', // legacy NOT NULL; el horario real ira en el grupo (post 09/06)
             'cant_examenes'=> 3,
             'peso_examen1' => $request->peso_examen1,
             'peso_examen2' => $request->peso_examen2,
@@ -67,12 +85,11 @@ class MateriaController extends Controller
     public function update(Request $request, Materia $materia)
     {
         $request->validate([
-            'sigla'        => 'required|string|max:20|unique:materias,sigla,' . $materia->id,
-            'nombre'       => 'required|string|max:100|unique:materias,nombre,' . $materia->id,
-            'dias'         => 'required|in:LMV,MJ',
-            'peso_examen1' => 'required|numeric|min:1|max:98',
-            'peso_examen2' => 'required|numeric|min:1|max:98',
-            'peso_examen3' => 'required|numeric|min:1|max:98',
+            'sigla'           => 'required|string|max:20|unique:materias,sigla,' . $materia->id,
+            'nombre'          => 'required|string|max:100|unique:materias,nombre,' . $materia->id,
+            'peso_examen1'    => 'required|numeric|min:1|max:98',
+            'peso_examen2'    => 'required|numeric|min:1|max:98',
+            'peso_examen3'    => 'required|numeric|min:1|max:98',
         ]);
 
         $suma = $request->peso_examen1 + $request->peso_examen2 + $request->peso_examen3;
@@ -85,7 +102,6 @@ class MateriaController extends Controller
         $materia->update([
             'sigla'        => strtoupper($request->sigla),
             'nombre'       => $request->nombre,
-            'dias'         => $request->dias,
             'peso_examen1' => $request->peso_examen1,
             'peso_examen2' => $request->peso_examen2,
             'peso_examen3' => $request->peso_examen3,
@@ -101,18 +117,19 @@ class MateriaController extends Controller
             ->with('success', 'Materia actualizada correctamente.');
     }
 
-    public function destroy(Materia $materia)
+    // Archivar materia (inactivación lógica — NO se elimina físicamente)
+    public function archivar(Materia $materia)
     {
         $materia->update(['activo' => false]);
 
         BitacoraLogger::registrar(
-            'DESACTIVAR',
+            'MATERIA_ARCHIVADA',
             'Materias',
-            'Materia desactivada: '.$materia->nombre.' ID='.$materia->id
+            'Materia archivada: '.$materia->nombre.' (sigla: '.$materia->sigla.')'
         );
 
         return redirect()->route('materias.index')
-            ->with('success', "Materia '{$materia->nombre}' desactivada.");
+            ->with('success', "Materia '{$materia->nombre}' archivada.");
     }
 
     public function reactivar(Materia $materia)
@@ -120,9 +137,9 @@ class MateriaController extends Controller
         $materia->update(['activo' => true]);
 
         BitacoraLogger::registrar(
-            'ACTIVAR',
+            'MATERIA_REACTIVADA',
             'Materias',
-            'Materia reactivada: '.$materia->nombre.' ID='.$materia->id
+            'Materia reactivada: '.$materia->nombre.' (sigla: '.$materia->sigla.')'
         );
 
         return redirect()->route('materias.index')

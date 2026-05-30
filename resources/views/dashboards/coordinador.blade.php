@@ -9,6 +9,18 @@
   try { $totalInscripciones = \App\Models\Inscripcion::count(); } catch (\Exception $e) { $totalInscripciones = 0; }
   try { $docsPendientes = \App\Models\DocumentoPostulante::where('estado', 'pendiente')->count(); } catch (\Exception $e) { $docsPendientes = 0; }
   try { $totalAulas = \App\Models\Aula::where('activo', true)->count(); } catch (\Exception $e) { $totalAulas = 0; }
+
+  // Cálculo automático de grupos: CEIL(inscritos / 80)
+  try {
+    $periodoActivoG = \Illuminate\Support\Facades\DB::table('periodos')->where('activo', true)->orderBy('id', 'desc')->first();
+    $totalInscritos = $periodoActivoG
+        ? \Illuminate\Support\Facades\DB::table('inscripciones')->where('periodo_id', $periodoActivoG->id)->count()
+        : 0;
+    $cantidadGrupos = $totalInscritos > 0 ? (int) ceil($totalInscritos / 80) : 0;
+    $promedioGrupo = $cantidadGrupos > 0 ? round($totalInscritos / $cantidadGrupos) : 0;
+  } catch (\Exception $e) {
+    $periodoActivoG = null; $totalInscritos = 0; $cantidadGrupos = 0; $promedioGrupo = 0;
+  }
 @endphp
 
 <div class="page-header mb-4">
@@ -17,6 +29,43 @@
     Bienvenido/a, <strong>{{ Auth::user()->name }}</strong>
     — Rol: <strong>{{ Auth::user()->rol->nombre ?? 'Sin rol' }}</strong>
   </p>
+</div>
+
+{{-- Cálculo automático de grupos --}}
+<div class="panel-cup mb-4">
+  <div class="panel-cup-header">
+    <strong>
+      <i class="bi bi-calculator me-1"></i>
+      Cálculo automático de grupos
+      @if($periodoActivoG)
+        — Periodo {{ \Carbon\Carbon::parse($periodoActivoG->fecha_ini_curso)->year }}
+      @endif
+    </strong>
+  </div>
+  <div class="panel-cup-body">
+    <div class="row g-3 align-items-center">
+      <div class="col-md-3 text-center">
+        <div style="font-size:2.5rem;font-weight:800;color:var(--cup-primary);">{{ $totalInscritos }}</div>
+        <div class="text-muted small">Total inscritos</div>
+      </div>
+      <div class="col-md-1 text-center">
+        <i class="bi bi-arrow-right fs-3 text-muted"></i>
+      </div>
+      <div class="col-md-3 text-center">
+        <div class="text-muted small mb-1">Fórmula</div>
+        <div style="font-family:monospace;font-size:0.95rem;background:#f8f9fb;padding:0.5rem;border-radius:8px;">
+          <code>⌈{{ $totalInscritos }} / 80⌉</code>
+        </div>
+      </div>
+      <div class="col-md-1 text-center">
+        <i class="bi bi-arrow-right fs-3 text-muted"></i>
+      </div>
+      <div class="col-md-4 text-center">
+        <div style="font-size:2.5rem;font-weight:800;color:var(--cup-success);">{{ $cantidadGrupos }} grupos</div>
+        <div class="text-muted small">~{{ $promedioGrupo }} postulantes por grupo</div>
+      </div>
+    </div>
+  </div>
 </div>
 
 <div class="row g-3 mb-4">

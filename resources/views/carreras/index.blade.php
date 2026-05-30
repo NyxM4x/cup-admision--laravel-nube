@@ -32,6 +32,12 @@
   </div>
 @endif
 
+<x-buscador-cup
+  :q="$q ?? ''"
+  :estado="$estado ?? 'activos'"
+  placeholder="Buscar por código o nombre..."
+/>
+
 <div class="panel-cup">
   <div class="panel-cup-body p-0">
     <div class="table-responsive">
@@ -50,7 +56,7 @@
       <tbody>
         @forelse($carreras as $carrera)
           <tr>
-            <td>{{ $loop->iteration }}</td>
+            <td>{{ $carreras->firstItem() + $loop->index }}</td>
             <td><span class="badge-cup badge-modulo">{{ $carrera->codigo }}</span></td>
             <td><strong>{{ $carrera->nombre }}</strong></td>
             <td>{{ $carrera->descripcion ?? '—' }}</td>
@@ -73,18 +79,33 @@
                 <i class="bi bi-pencil"></i>
               </a>
               @if($carrera->activo)
-                <form action="{{ route('carreras.destroy', $carrera) }}" method="POST" style="display:inline"
-                      onsubmit="return confirm('¿Desactivar esta carrera?')">
-                  @csrf @method('DELETE')
-                  <button type="submit" class="btn-action btn-action-danger" title="Desactivar">
+                <form id="form-archivar-carrera-{{ $carrera->id }}"
+                      action="{{ route('carreras.archivar', $carrera) }}" method="POST" style="display:inline">
+                  @csrf
+                  <button type="button" class="btn-action btn-action-danger" title="Archivar"
+                          onclick="cupConfirmar({
+                            titulo: 'Archivar carrera',
+                            mensaje: '¿Querés archivar la carrera {{ addslashes($carrera->nombre) }}?',
+                            subtexto: 'Quedará inactiva. No se elimina; podés reactivarla después.',
+                            textoBoton: 'Sí, archivar',
+                            tipo: 'warning',
+                            formSelector: '#form-archivar-carrera-{{ $carrera->id }}'
+                          })">
                     <i class="bi bi-archive"></i>
                   </button>
                 </form>
               @else
-                <form action="{{ route('carreras.reactivar', $carrera) }}" method="POST" style="display:inline"
-                      onsubmit="return confirm('¿Reactivar esta carrera?')">
+                <form id="form-reactivar-carrera-{{ $carrera->id }}"
+                      action="{{ route('carreras.reactivar', $carrera) }}" method="POST" style="display:inline">
                   @csrf
-                  <button type="submit" class="btn-action btn-action-success" title="Reactivar">
+                  <button type="button" class="btn-action btn-action-success" title="Reactivar"
+                          onclick="cupConfirmar({
+                            titulo: 'Reactivar carrera',
+                            mensaje: '¿Querés reactivar la carrera {{ addslashes($carrera->nombre) }}?',
+                            textoBoton: 'Sí, reactivar',
+                            tipo: 'success',
+                            formSelector: '#form-reactivar-carrera-{{ $carrera->id }}'
+                          })">
                     <i class="bi bi-arrow-counterclockwise"></i>
                   </button>
                 </form>
@@ -92,12 +113,18 @@
             </td>
           </tr>
         @empty
-          <tr><td colspan="7" class="text-center py-4 text-muted">No hay carreras registradas.</td></tr>
+          <tr><td colspan="7" class="text-center py-4 text-muted">No se encontraron carreras.</td></tr>
         @endforelse
       </tbody>
     </table>
     </div>
   </div>
 </div>
+
+@if($carreras->hasPages())
+  <div class="mt-3 d-flex justify-content-center">
+    {{ $carreras->links() }}
+  </div>
+@endif
 
 @endsection

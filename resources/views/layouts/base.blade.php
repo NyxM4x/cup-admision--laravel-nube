@@ -565,6 +565,10 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+{{-- Modal global de confirmación (reemplaza al confirm() del navegador) --}}
+<x-modal-confirmar />
+
 @stack('scripts')
 </body>
 </html>

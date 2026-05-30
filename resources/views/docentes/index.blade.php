@@ -14,6 +14,12 @@
   </a>
 </div>
 
+<x-buscador-cup
+  :q="$q ?? ''"
+  :estado="$estado ?? 'activos'"
+  placeholder="Buscar docente por nombre, CI o profesión..."
+/>
+
 <div class="panel-cup">
   <div class="panel-cup-body p-0">
     <div class="table-responsive">
@@ -53,17 +59,33 @@
                 <i class="bi bi-pencil"></i>
               </a>
               @if($docente->activo)
-                <form action="{{ route('docentes.destroy', $docente) }}" method="POST" style="display:inline"
-                      onsubmit="return confirm('¿Desactivar este docente?')">
+                <form id="form-desactivar-docente-{{ $docente->id }}"
+                      action="{{ route('docentes.destroy', $docente) }}" method="POST" style="display:inline">
                   @csrf @method('DELETE')
-                  <button type="submit" class="btn-action btn-action-danger" title="Desactivar">
+                  <button type="button" class="btn-action btn-action-danger" title="Desactivar"
+                          onclick="cupConfirmar({
+                            titulo: 'Desactivar docente',
+                            mensaje: '¿Querés desactivar a {{ addslashes($docente->persona->nombre) }}?',
+                            subtexto: 'No se eliminará; podés reactivarlo después.',
+                            textoBoton: 'Sí, desactivar',
+                            tipo: 'warning',
+                            formSelector: '#form-desactivar-docente-{{ $docente->id }}'
+                          })">
                     <i class="bi bi-archive"></i>
                   </button>
                 </form>
               @else
-                <form action="{{ route('docentes.reactivar', $docente) }}" method="POST" style="display:inline">
+                <form id="form-reactivar-docente-{{ $docente->id }}"
+                      action="{{ route('docentes.reactivar', $docente) }}" method="POST" style="display:inline">
                   @csrf
-                  <button type="submit" class="btn-action btn-action-success" title="Reactivar">
+                  <button type="button" class="btn-action btn-action-success" title="Reactivar"
+                          onclick="cupConfirmar({
+                            titulo: 'Reactivar docente',
+                            mensaje: '¿Querés reactivar a {{ addslashes($docente->persona->nombre) }}?',
+                            textoBoton: 'Sí, reactivar',
+                            tipo: 'success',
+                            formSelector: '#form-reactivar-docente-{{ $docente->id }}'
+                          })">
                     <i class="bi bi-arrow-counterclockwise"></i>
                   </button>
                 </form>

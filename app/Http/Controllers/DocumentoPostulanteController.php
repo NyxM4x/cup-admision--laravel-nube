@@ -3,195 +3,185 @@
 namespace App\Http\Controllers;
 
 use App\Domain\Bitacora\Services\BitacoraLogger;
+use App\Mail\HabilitacionPostulanteMail;
 use App\Models\DocumentoPostulante;
 use App\Models\Inscripcion;
-use App\Models\Requisito;
 use App\Models\Periodo;
-use App\Models\Postulante;
+use App\Models\Requisito;
+use App\Models\Rol;
+use App\Models\User;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Str;
 
 class DocumentoPostulanteController extends Controller
 {
-    // Listado de postulantes con estado de documentación
-    public function index()
+    public function index(Request $request)
     {
-        $periodoActivo = Periodo::where('activo', true)->first();
+        $q = trim($request->input('q', ''));
 
-        $inscripciones = collect();
+        $periodoActivo = Periodo::where('activo', true)->orderBy('id', 'desc')->first();
+        $periodoId = $request->input('periodo_id', $periodoActivo?->id);
+        $periodos = Periodo::orderBy('id', 'desc')->get();
 
-        if ($periodoActivo) {
-            $inscripciones = Inscripcion::where('periodo_id', $periodoActivo->id)
-                ->where('estado', 'activa')
-                ->with([
-                    'postulante.persona',
-                    'documentos.requisito',
-                    'postulacionCarreras.carrera',
-                ])
-                ->get()
-                ->map(function ($inscripcion) use ($periodoActivo) {
-                    $requisitos   = Requisito::where('periodo_id', $periodoActivo->id)
-                                            ->where('activo', true)->get();
-                    $totalReqs    = $requisitos->count();
-                    $totalSubidos = $inscripcion->documentos->count();
-                    $aprobados    = $inscripcion->documentos->where('estado', 'aprobado')->count();
-                    $rechazados   = $inscripcion->documentos->where('estado', 'rechazado')->count();
+        $query = Inscripcion::with([
+                'postulante.persona',
+                'postulacionCarreras.carrera',
+                'documentos.requisito',
+            ])
+            ->where('estado', 'activa')
+            ->orderBy('id', 'desc');
 
-                    $inscripcion->total_requisitos = $totalReqs;
-                    $inscripcion->total_subidos    = $totalSubidos;
-                    $inscripcion->aprobados        = $aprobados;
-                    $inscripcion->rechazados       = $rechazados;
-                    $inscripcion->completo         = ($aprobados === $totalReqs && $totalReqs > 0);
-
-                    return $inscripcion;
-                });
+        if ($periodoId && $periodoId !== 'todos') {
+            $query->where('periodo_id', $periodoId);
         }
 
-        return view('documentos.index', compact('inscripciones', 'periodoActivo'));
+        if ($q !== '') {
+            $query->whereHas('postulante.persona', function ($w) use ($q) {
+                $w->whereRaw('unaccent(nombre) ilike unaccent(?)', ["%{$q}%"])
+                  ->orWhere('ci', 'ilike', "%{$q}%");
+            });
+        }
+
+        $inscripciones = $query->paginate(20)->withQueryString();
+
+        return view('documentos.index', compact('inscripciones', 'q', 'periodos', 'periodoId'));
     }
 
-    // Ver y gestionar documentos de una inscripción específica
     public function show(Inscripcion $inscripcion)
     {
-        $periodoActivo = Periodo::where('activo', true)->first();
+        $inscripcion->load([
+            'postulante.persona',
+            'postulacionCarreras.carrera',
+            'documentos.requisito',
+        ]);
 
-        // Requisitos del periodo activo
+        // Todos los requisitos del periodo (no solo los ya marcados)
         $requisitos = Requisito::where('periodo_id', $inscripcion->periodo_id)
-            ->where('activo', true)
+            ->orderBy('obligatorio', 'desc')
+            ->orderBy('nombre')
             ->get();
 
-        // Documentos ya subidos para esta inscripción
-        $documentos = DocumentoPostulante::where('inscripcion_id', $inscripcion->id)
-            ->with('requisito')
-            ->get()
-            ->keyBy('requisito_id'); // indexados por requisito para fácil acceso en la vista
+        $docPorRequisito = $inscripcion->documentos->keyBy('requisito_id');
 
-        $inscripcion->load('postulante.persona', 'postulacionCarreras.carrera');
-
-        return view('documentos.show', compact('inscripcion', 'requisitos', 'documentos'));
+        return view('documentos.show', compact('inscripcion', 'requisitos', 'docPorRequisito'));
     }
 
-    // Subir un documento para un requisito específico
-    public function store(Request $request, Inscripcion $inscripcion)
+    public function actualizar(Request $request, Inscripcion $inscripcion)
     {
-        $requisito = Requisito::findOrFail($request->requisito_id);
-
-        // Construir mimes correctamente — Laravel acepta: pdf,jpg,jpeg,png
-        $formatosArray = array_map('trim', explode(',', strtolower($requisito->formato_aceptado)));
-        $mimes = [];
-        foreach ($formatosArray as $f) {
-            if ($f === 'jpg') {
-                $mimes[] = 'jpg';
-                $mimes[] = 'jpeg';
-            } else {
-                $mimes[] = $f;
-            }
-        }
-        $formatosMimes = implode(',', $mimes);
-        $maxKb = $requisito->tamanio_max_kb;
-
         $request->validate([
-            'requisito_id' => 'required|exists:requisitos,id',
-            'archivo'      => "required|file|mimes:{$formatosMimes}|max:{$maxKb}",
-        ], [
-            'archivo.mimes' => "El archivo debe ser de tipo: {$requisito->formato_aceptado}",
-            'archivo.max'   => "El archivo no debe superar " . ($maxKb / 1024) . " MB.",
+            'requisitos'   => 'array',
+            'requisitos.*' => 'boolean',
         ]);
 
-        try {
-            $inscripcion->load('postulante.persona');
+        $habilitadoAhora = false;
 
-            // Si ya existe un documento para este requisito, eliminar el archivo anterior
-            $docExistente = DocumentoPostulante::where('inscripcion_id', $inscripcion->id)
-                ->where('requisito_id', $requisito->id)
-                ->first();
+        DB::transaction(function () use ($request, $inscripcion, &$habilitadoAhora) {
+            $requisitos = Requisito::where('periodo_id', $inscripcion->periodo_id)->get();
 
-            if ($docExistente) {
-                Storage::disk('public')->delete($docExistente->archivo);
-                $docExistente->delete();
+            foreach ($requisitos as $req) {
+                $cumplido = (bool) $request->input('requisitos.'.$req->id, false);
+
+                DocumentoPostulante::updateOrCreate(
+                    [
+                        'inscripcion_id' => $inscripcion->id,
+                        'requisito_id'   => $req->id,
+                    ],
+                    [
+                        'cumplido'         => $cumplido,
+                        'fecha_validacion' => $cumplido ? now() : null,
+                        'validado_por'     => $cumplido ? Auth::id() : null,
+                        'estado'           => $cumplido ? 'aprobado' : 'pendiente', // compat columna vieja
+                    ]
+                );
             }
 
-            // Guardar el nuevo archivo
-            $path = $request->file('archivo')
-                ->store("documentos/{$inscripcion->id}", 'public');
+            // ¿Todos los OBLIGATORIOS cumplidos?
+            $obligatorios = Requisito::where('periodo_id', $inscripcion->periodo_id)
+                ->where('obligatorio', true)
+                ->pluck('id');
 
-            DocumentoPostulante::create([
-                'inscripcion_id' => $inscripcion->id,
-                'requisito_id'   => $requisito->id,
-                'archivo'        => $path,
-                'estado'         => 'pendiente',
-                'comentario'     => null,
-                'fecha_subida'   => now(),
-            ]);
+            $cumplidosObligatorios = DocumentoPostulante::where('inscripcion_id', $inscripcion->id)
+                ->whereIn('requisito_id', $obligatorios)
+                ->where('cumplido', true)
+                ->count();
 
-            BitacoraLogger::registrar(
-                'SUBIR_DOC',
-                'Documentacion',
-                'Documento subido: '.$requisito->nombre.' para postulante '.$inscripcion->postulante->persona->nombre.' (inscripcion_id='.$inscripcion->id.')'
-            );
+            $todosCumplidos = $obligatorios->count() > 0
+                && $obligatorios->count() === $cumplidosObligatorios;
 
+            if ($todosCumplidos) {
+                // Retorna true solo si CREÓ el usuario (primera habilitación)
+                $habilitadoAhora = $this->habilitarPostulante($inscripcion);
+            }
+        });
+
+        if ($habilitadoAhora) {
             return redirect()->route('documentos.show', $inscripcion)
-                ->with('success', "Documento '{$requisito->nombre}' subido correctamente.");
-        } catch (\Throwable $e) {
-            BitacoraLogger::registrar(
-                'ERROR_SUBIR_DOC',
-                'Documentacion',
-                'Error al subir documento '.$requisito->nombre.': '.$e->getMessage()
-            );
-
-            throw $e;
+                ->with('success', '¡Postulante habilitado! Se generó el usuario y se envió el email con las credenciales.');
         }
+
+        return redirect()->route('documentos.show', $inscripcion)
+            ->with('success', 'Documentación actualizada correctamente.');
     }
 
-    // Aprobar un documento
-    public function aprobar(DocumentoPostulante $documento)
+    protected function habilitarPostulante(Inscripcion $inscripcion): bool
     {
+        $postulante = $inscripcion->postulante;
+        $persona = $postulante->persona;
+
+        // Idempotente: si ya tiene usuario, no duplicar ni reenviar
+        if (User::where('email', $persona->correo)->exists()) {
+            return false;
+        }
+
+        $passwordTemporal = $this->generarPasswordTemporal();
+        $rolPostulante = Rol::where('nombre', 'Postulante')->first();
+
+        User::create([
+            'name'                  => $persona->nombre,
+            'email'                 => $persona->correo,
+            'ci'                    => $persona->ci,
+            'password'              => Hash::make($passwordTemporal),
+            'rol_id'                => $rolPostulante?->id,
+            'activo'                => true,
+            'debe_cambiar_password' => true, // fuerza cambio en primer login
+        ]);
+
+        $carrera1 = optional(optional($inscripcion->postulacionCarreras->where('prioridad', 1)->first())->carrera)->nombre ?? 'Sin asignar';
+
         try {
-            $documento->update([
-                'estado'     => 'aprobado',
-                'comentario' => null,
-            ]);
-
-            BitacoraLogger::registrar(
-                'VALIDAR_DOC',
-                'Documentacion',
-                'Documento aprobado: '.$documento->requisito->nombre.' ID='.$documento->id
-            );
-
-            return redirect()->route('documentos.show', $documento->inscripcion_id)
-                ->with('success', "Documento '{$documento->requisito->nombre}' aprobado.");
-        } catch (\Throwable $e) {
-            BitacoraLogger::registrar(
-                'ERROR_VALIDAR_DOC',
-                'Documentacion',
-                'Error al aprobar documento ID='.$documento->id.': '.$e->getMessage()
-            );
-
-            throw $e;
+            Mail::to($persona->correo)->send(new HabilitacionPostulanteMail(
+                nombreUsuario: $persona->nombre,
+                email: $persona->correo,
+                passwordTemporal: $passwordTemporal,
+                carrera1: $carrera1,
+            ));
+        } catch (\Exception $e) {
+            Log::error('Error enviando mail de habilitacion: '.$e->getMessage());
         }
-    }
-
-    // Rechazar un documento con comentario
-    public function rechazar(Request $request, DocumentoPostulante $documento)
-    {
-        $request->validate([
-            'comentario' => 'required|string|max:500',
-        ], [
-            'comentario.required' => 'Debe indicar el motivo del rechazo.',
-        ]);
-
-        $documento->update([
-            'estado'     => 'rechazado',
-            'comentario' => $request->comentario,
-        ]);
 
         BitacoraLogger::registrar(
-            'RECHAZAR_DOC',
-            'Documentacion',
-            'Documento rechazado: '.$documento->requisito->nombre.' ID='.$documento->id.' motivo: '.$request->comentario
+            'POSTULANTE_HABILITADO',
+            'Documentos',
+            "Postulante {$persona->nombre} habilitado para pago (CI: {$persona->ci})",
+            Auth::id()
         );
 
-        return redirect()->route('documentos.show', $documento->inscripcion_id)
-            ->with('success', "Documento '{$documento->requisito->nombre}' rechazado.");
+        return true;
+    }
+
+    protected function generarPasswordTemporal(): string
+    {
+        // 8 chars: 1 mayúscula + 1 minúscula + 1 número + 5 aleatorios
+        $may = chr(rand(65, 90));
+        $min = chr(rand(97, 122));
+        $num = (string) rand(0, 9);
+        $resto = Str::random(5);
+
+        return $may.$min.$num.$resto;
     }
 }

@@ -266,5 +266,10 @@ class DatabaseSeeder extends Seeder
                 ]);
             }
         }
+
+        // ══════════════════════════════════════
+        // 9. DATOS DEMO MASIVOS (500 postulantes + soporte)
+        // ══════════════════════════════════════
+        $this->call(DatosDemoSeeder::class);
     }
 }
