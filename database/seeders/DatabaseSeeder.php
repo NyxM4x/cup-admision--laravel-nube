@@ -34,26 +34,33 @@ class DatabaseSeeder extends Seeder
         // ══════════════════════════════════════
         // 2. PERIODOS
         // ══════════════════════════════════════
-        DB::table('periodos')->insert([
-            [
-                'fecha_ini_inscripcion' => '2026-01-05',
-                'fecha_fin_inscripcion' => '2026-02-28',
-                'fecha_ini_curso'       => '2026-03-02',
-                'fecha_fin_curso'       => '2026-06-30',
-                'activo'                => true,
-                'created_at'            => now(),
-                'updated_at'            => now(),
-            ],
-            [
-                'fecha_ini_inscripcion' => '2026-07-06',
-                'fecha_fin_inscripcion' => '2026-08-28',
-                'fecha_ini_curso'       => '2026-09-01',
-                'fecha_fin_curso'       => '2026-11-30',
-                'activo'                => false,
-                'created_at'            => now(),
-                'updated_at'            => now(),
-            ],
-        ]);
+        DB::table('postulacion_carreras')->delete(); // limpiar dependencias primero
+        DB::table('inscripciones')->delete();
+        DB::table('postulantes')->delete();
+        DB::table('cupo_carreras')->delete();
+        DB::table('requisitos')->delete();
+        DB::table('periodos')->delete();             // ahora sí limpiar periodos
+
+    DB::table('periodos')->insert([
+        [
+            'fecha_ini_inscripcion' => '2026-01-05',
+            'fecha_fin_inscripcion' => '2026-02-28',
+            'fecha_ini_curso'       => '2026-03-02',
+            'fecha_fin_curso'       => '2026-06-30',
+            'activo'                => true,
+            'created_at'            => now(),
+            'updated_at'            => now(),
+        ],
+        [
+            'fecha_ini_inscripcion' => '2026-07-06',
+            'fecha_fin_inscripcion' => '2026-08-28',
+            'fecha_ini_curso'       => '2026-09-01',
+            'fecha_fin_curso'       => '2026-11-30',
+            'activo'                => false,
+            'created_at'            => now(),
+            'updated_at'            => now(),
+        ],
+    ]);
 
         $periodo1 = DB::table('periodos')->where('activo', true)->first();
 
