@@ -9,6 +9,7 @@
   try { $totalRoles = \App\Models\Rol::where('activo', true)->count(); } catch (\Exception $e) { $totalRoles = 0; }
   try { $totalAulas = \App\Models\Aula::where('activo', true)->count(); } catch (\Exception $e) { $totalAulas = 0; }
   try { $totalBitacora = \App\Models\Bitacora::count(); } catch (\Exception $e) { $totalBitacora = 0; }
+  try { $totalPostulantes = \App\Models\Postulante::count(); } catch (\Exception $e) { $totalPostulantes = 0; }
 @endphp
 
 <div class="page-header mb-4">
@@ -20,7 +21,7 @@
 </div>
 
 <div class="row g-3 mb-4">
-  <div class="col-md-6 col-lg-3">
+  <div class="col-md-6 col-lg-2">  {{-- antes col-lg-3 --}}
     <a href="{{ route('usuarios.index') }}" class="text-decoration-none text-reset">
       <div class="kpi-card kpi-primary h-100">
         <div class="kpi-icon"><i class="bi bi-people-fill"></i></div>
@@ -29,7 +30,7 @@
       </div>
     </a>
   </div>
-  <div class="col-md-6 col-lg-3">
+  <div class="col-md-6 col-lg-2">
     <a href="{{ route('roles.index') }}" class="text-decoration-none text-reset">
       <div class="kpi-card kpi-success h-100">
         <div class="kpi-icon"><i class="bi bi-shield-lock"></i></div>
@@ -38,7 +39,7 @@
       </div>
     </a>
   </div>
-  <div class="col-md-6 col-lg-3">
+  <div class="col-md-6 col-lg-2">
     <a href="{{ route('aulas.index') }}" class="text-decoration-none text-reset">
       <div class="kpi-card kpi-accent h-100">
         <div class="kpi-icon"><i class="bi bi-door-open-fill"></i></div>
@@ -47,12 +48,21 @@
       </div>
     </a>
   </div>
-  <div class="col-md-6 col-lg-3">
+  <div class="col-md-6 col-lg-2">
     <a href="{{ route('bitacora.index') }}" class="text-decoration-none text-reset">
       <div class="kpi-card kpi-warning h-100">
         <div class="kpi-icon"><i class="bi bi-journal-text"></i></div>
         <div class="kpi-value">{{ $totalBitacora }}</div>
         <div class="kpi-label">Eventos en bitácora</div>
+      </div>
+    </a>
+  </div>
+  <div class="col-md-6 col-lg-4">  {{-- más ancho para destacar --}}
+    <a href="{{ route('postulantes.index') }}" class="text-decoration-none text-reset">
+      <div class="kpi-card kpi-info h-100">
+        <div class="kpi-icon"><i class="bi bi-person-vcard-fill"></i></div>
+        <div class="kpi-value">{{ $totalPostulantes }}</div>
+        <div class="kpi-label">Postulantes registrados</div>
       </div>
     </a>
   </div>
@@ -90,14 +100,12 @@
               <div><div style="font-weight:600;">Ver bitácora</div><small class="text-muted">Auditoría de acciones</small></div>
             </a>
           </div>
-          @if(Route::has('postulantes.index'))
           <div class="col-md-6">
             <a href="{{ route('postulantes.index') }}" class="d-flex align-items-center gap-3 p-3 text-decoration-none text-reset rounded" style="background:#f8f9fb;border:1px solid var(--cup-border);">
               <div style="width:42px;height:42px;border-radius:10px;background:rgba(30,95,168,0.10);display:flex;align-items:center;justify-content:center;color:var(--cup-primary-light);"><i class="bi bi-person-vcard fs-4"></i></div>
               <div><div style="font-weight:600;">Postulantes</div><small class="text-muted">Registro de postulantes</small></div>
             </a>
           </div>
-          @endif
         </div>
       </div>
     </div>
