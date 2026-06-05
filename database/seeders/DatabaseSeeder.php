@@ -17,6 +17,7 @@ class DatabaseSeeder extends Seeder
         $this->call([
             SeguridadSeeder::class,
             AulasSeeder::class,
+            HorariosSeeder::class,
         ]);
 
         // ══════════════════════════════════════
