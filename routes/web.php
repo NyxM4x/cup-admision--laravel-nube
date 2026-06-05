@@ -59,6 +59,8 @@ require __DIR__.'/auth.php';
 use App\Http\Controllers\PeriodoController;
 use App\Http\Controllers\CarreraController;
 use App\Http\Controllers\MateriaController;
+use App\Http\Controllers\HorarioController;
+use App\Http\Controllers\GrupoController;
 use App\Http\Controllers\RequisitoController;
 use App\Http\Controllers\DocenteController;
 use App\Http\Controllers\PostulanteController;
@@ -80,6 +82,20 @@ Route::middleware('auth')->group(function () {
     Route::resource('materias', MateriaController::class)->except(['destroy']);
     Route::post('materias/{materia}/archivar',  [MateriaController::class, 'archivar'])->name('materias.archivar');
     Route::post('materias/{materia}/reactivar', [MateriaController::class, 'reactivar'])->name('materias.reactivar');
+
+    // CU19 — Horarios (catálogo de bloques horarios)
+    Route::resource('horarios', HorarioController::class)->except(['destroy', 'show']);
+    Route::post('horarios/{horario}/archivar',  [HorarioController::class, 'archivar'])->name('horarios.archivar');
+    Route::post('horarios/{horario}/reactivar', [HorarioController::class, 'reactivar'])->name('horarios.reactivar');
+
+    // CU17/CU18/CU20 — Grupos (generación, docente, aula)
+    Route::get('grupos/generar-automaticos',       [GrupoController::class, 'formGenerar'])->name('grupos.generar-automaticos.form');
+    Route::post('grupos/generar-automaticos',      [GrupoController::class, 'generarAutomaticos'])->name('grupos.generar-automaticos');
+    Route::resource('grupos', GrupoController::class)->except(['destroy', 'show']);
+    Route::post('grupos/{grupo}/asignar-docente',  [GrupoController::class, 'asignarDocente'])->name('grupos.asignar-docente');
+    Route::post('grupos/{grupo}/asignar-aula',     [GrupoController::class, 'asignarAula'])->name('grupos.asignar-aula');
+    Route::post('grupos/{grupo}/archivar',         [GrupoController::class, 'archivar'])->name('grupos.archivar');
+    Route::post('grupos/{grupo}/reactivar',        [GrupoController::class, 'reactivar'])->name('grupos.reactivar');
 
     // CU11 — Requisitos (sin destroy: solo archivar/reactivar)
     Route::resource('requisitos', RequisitoController::class)->except(['destroy']);

@@ -62,10 +62,10 @@ class DatosDemoSeeder extends Seeder
         // Esquema real: sigla (no codigo), sin descripcion, dias NOT NULL.
         DB::table('materias')->delete();
         $materias = [
-            ['sigla' => 'MAT', 'nombre' => 'Matemática', 'dias' => 'LXV', 'dias_dictado' => ['lunes', 'miercoles', 'viernes'], 'hora_inicio' => '07:00:00', 'hora_fin' => '09:00:00'],
-            ['sigla' => 'FIS', 'nombre' => 'Física',     'dias' => 'MJ',  'dias_dictado' => ['martes', 'jueves'],              'hora_inicio' => '09:00:00', 'hora_fin' => '11:00:00'],
-            ['sigla' => 'QUI', 'nombre' => 'Química',    'dias' => 'LXV', 'dias_dictado' => ['lunes', 'miercoles', 'viernes'], 'hora_inicio' => '09:00:00', 'hora_fin' => '11:00:00'],
-            ['sigla' => 'LEN', 'nombre' => 'Lenguaje',   'dias' => 'MJ',  'dias_dictado' => ['martes', 'jueves'],              'hora_inicio' => '07:00:00', 'hora_fin' => '09:00:00'],
+            ['sigla' => 'MAT', 'nombre' => 'Matemáticas', 'dias' => 'LXV', 'dias_dictado' => ['lunes', 'miercoles', 'viernes'], 'hora_inicio' => '07:00:00', 'hora_fin' => '09:00:00'],
+            ['sigla' => 'FIS', 'nombre' => 'Física',      'dias' => 'MJ',  'dias_dictado' => ['martes', 'jueves'],              'hora_inicio' => '09:00:00', 'hora_fin' => '11:00:00'],
+            ['sigla' => 'COM', 'nombre' => 'Computación', 'dias' => 'LXV', 'dias_dictado' => ['lunes', 'miercoles', 'viernes'], 'hora_inicio' => '09:00:00', 'hora_fin' => '11:00:00'],
+            ['sigla' => 'ING', 'nombre' => 'Inglés',      'dias' => 'MJ',  'dias_dictado' => ['martes', 'jueves'],              'hora_inicio' => '07:00:00', 'hora_fin' => '09:00:00'],
         ];
         foreach ($materias as $m) {
             DB::table('materias')->insert([

@@ -370,7 +370,7 @@
                 {{-- Gestión Académica --}}
                 <li class="nav-item dropdown">
                     <a class="nav-link dropdown-toggle
-                        {{ request()->routeIs('periodos.*','carreras.*','materias.*') ? 'active' : '' }}"
+                        {{ request()->routeIs('periodos.*','carreras.*','materias.*','horarios.*','grupos.*') ? 'active' : '' }}"
                        href="#" data-bs-toggle="dropdown">
                         <i class="bi bi-building me-1"></i>Gestión Académica
                     </a>
@@ -392,6 +392,18 @@
                             <a class="dropdown-item {{ request()->routeIs('materias.*') ? 'fw-bold' : '' }}"
                                href="{{ route('materias.index') }}">
                                 <i class="bi bi-book me-2 text-warning"></i>Materias
+                            </a>
+                        </li>
+                        <li>
+                            <a class="dropdown-item {{ request()->routeIs('horarios.*') ? 'fw-bold' : '' }}"
+                               href="{{ route('horarios.index') }}">
+                                <i class="bi bi-clock me-2 text-info"></i>Horarios
+                            </a>
+                        </li>
+                        <li>
+                            <a class="dropdown-item {{ request()->routeIs('grupos.*') ? 'fw-bold' : '' }}"
+                               href="{{ route('grupos.index') }}">
+                                <i class="bi bi-people-fill me-2 text-primary"></i>Grupos
                             </a>
                         </li>
                     </ul>
