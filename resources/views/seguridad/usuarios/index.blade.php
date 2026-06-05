@@ -88,22 +88,25 @@
             <a href="{{ route('usuarios.edit', $u->id) }}" class="btn-action btn-action-edit" title="Editar">
               <i class="bi bi-pencil"></i>
             </a>
-<<<<<<< HEAD
             @if($u->bloqueado_hasta && now()->lessThan($u->bloqueado_hasta))
-              <form action="{{ route('usuarios.reactivar', $u->id) }}" method="POST" style="display:inline">
+              <form id="form-desbloquear-usuario-{{ $u->id }}"
+                    action="{{ route('usuarios.reactivar', $u->id) }}" method="POST" style="display:inline">
                 @csrf
-                <button type="submit" class="btn-action btn-action-success" title="Desbloquear">
+                <button type="button" class="btn-action btn-action-success" title="Desbloquear"
+                        onclick="cupConfirmar({
+                          titulo: 'Desbloquear usuario',
+                          mensaje: '¿Querés desbloquear al usuario {{ addslashes($u->name) }}?',
+                          subtexto: 'Se le permitirá iniciar sesión nuevamente.',
+                          textoBoton: 'Sí, desbloquear',
+                          tipo: 'success',
+                          formSelector: '#form-desbloquear-usuario-{{ $u->id }}'
+                        })">
                   <i class="bi bi-unlock"></i>
                 </button>
               </form>
             @elseif($u->activo)
-              <form action="{{ route('usuarios.destroy', $u->id) }}" method="POST" style="display:inline"
-                    onsubmit="return confirm('¿Inactivar al usuario {{ $u->name }}?')">
-=======
-            @if($u->activo)
               <form id="form-inactivar-usuario-{{ $u->id }}"
                     action="{{ route('usuarios.destroy', $u->id) }}" method="POST" style="display:inline">
->>>>>>> main
                 @csrf @method('DELETE')
                 <button type="button" class="btn-action btn-action-danger" title="Inactivar"
                         onclick="cupConfirmar({
