@@ -75,6 +75,6 @@
   <div class="col-md-4">
     <label class="form-label">Cupo máximo <span class="text-danger">*</span></label>
     <input type="number" name="cupo_max" class="form-control" min="1" max="300" required
-           value="{{ old('cupo_max', $g->cupo_max ?? 80) }}">
+           value="{{ old('cupo_max', $g->cupo_max ?? 70) }}">
   </div>
 </div>

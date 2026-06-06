@@ -17,7 +17,7 @@ use Illuminate\Support\Facades\DB;
 class GrupoController extends Controller
 {
     public const MAX_GRUPOS_DOCENTE = 4;
-    public const CUPO_DEFAULT = 80;
+    public const CUPO_DEFAULT = 70;
 
     public function index(Request $request)
     {
@@ -170,7 +170,7 @@ class GrupoController extends Controller
         ));
     }
 
-    // CU17 — Generación automática de grupos: CEIL(habilitados/80) por materia
+    // CU17 — Generación automática de grupos: CEIL(habilitados/70) por materia
     public function generarAutomaticos(Request $request)
     {
         $periodo = Periodo::where('activo', true)->orderBy('id', 'desc')->first();

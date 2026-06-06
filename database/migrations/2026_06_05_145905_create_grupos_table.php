@@ -19,7 +19,7 @@ return new class extends Migration
             $table->foreignId('horario_id')->nullable()->constrained('horarios')->nullOnDelete();
             $table->foreignId('aula_id')->nullable()->constrained('aulas')->nullOnDelete();
             $table->foreignId('docente_id')->nullable()->constrained('docentes')->nullOnDelete();
-            $table->integer('cupo_max')->default(80);
+            $table->integer('cupo_max')->default(70);
             $table->integer('inscritos_actuales')->default(0);
             $table->boolean('activo')->default(true);
             $table->timestamps();
