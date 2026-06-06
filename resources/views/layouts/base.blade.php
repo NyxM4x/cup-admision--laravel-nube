@@ -409,6 +409,29 @@
                     </ul>
                 </li>
 
+                {{-- Admisión (CU24-CU27) --}}
+                <li class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle
+                        {{ request()->routeIs('admision.*','reportes.*','estadisticas.*') ? 'active' : '' }}"
+                       href="#" data-bs-toggle="dropdown">
+                        <i class="bi bi-graph-up me-1"></i>Admisión
+                    </a>
+                    <ul class="dropdown-menu">
+                        <li><span class="nav-section">Asignación y resultados</span></li>
+                        <li><a class="dropdown-item {{ request()->routeIs('admision.preasignacion') ? 'fw-bold' : '' }}" href="{{ route('admision.preasignacion') }}">
+                            <i class="bi bi-list-ol me-2 text-primary"></i>Pre-asignación (ranking)</a></li>
+                        <li><a class="dropdown-item {{ request()->routeIs('admision.resultados') ? 'fw-bold' : '' }}" href="{{ route('admision.resultados') }}">
+                            <i class="bi bi-diagram-3 me-2 text-success"></i>Resultados de asignación</a></li>
+                        <li><a class="dropdown-item {{ request()->routeIs('admision.admitidos') ? 'fw-bold' : '' }}" href="{{ route('admision.admitidos') }}">
+                            <i class="bi bi-award me-2 text-warning"></i>Lista final admitidos</a></li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li><a class="dropdown-item {{ request()->routeIs('reportes.*') ? 'fw-bold' : '' }}" href="{{ route('reportes.index') }}">
+                            <i class="bi bi-file-earmark-text me-2 text-danger"></i>Reportes (PDF/Excel/HTML)</a></li>
+                        <li><a class="dropdown-item {{ request()->routeIs('estadisticas.*') ? 'fw-bold' : '' }}" href="{{ route('estadisticas.dashboard') }}">
+                            <i class="bi bi-bar-chart me-2 text-info"></i>Estadísticas</a></li>
+                    </ul>
+                </li>
+
                 {{-- Inscripciones --}}
                 <li class="nav-item dropdown">
                     <a class="nav-link dropdown-toggle

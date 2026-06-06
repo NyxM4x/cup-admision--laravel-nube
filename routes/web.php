@@ -61,6 +61,10 @@ use App\Http\Controllers\CarreraController;
 use App\Http\Controllers\MateriaController;
 use App\Http\Controllers\HorarioController;
 use App\Http\Controllers\GrupoController;
+use App\Http\Controllers\AsignacionCarreraController;
+use App\Http\Controllers\ListaAdmitidosController;
+use App\Http\Controllers\ReporteController;
+use App\Http\Controllers\EstadisticaController;
 use App\Http\Controllers\RequisitoController;
 use App\Http\Controllers\DocenteController;
 use App\Http\Controllers\PostulanteController;
@@ -96,6 +100,27 @@ Route::middleware('auth')->group(function () {
     Route::post('grupos/{grupo}/asignar-aula',     [GrupoController::class, 'asignarAula'])->name('grupos.asignar-aula');
     Route::post('grupos/{grupo}/archivar',         [GrupoController::class, 'archivar'])->name('grupos.archivar');
     Route::post('grupos/{grupo}/reactivar',        [GrupoController::class, 'reactivar'])->name('grupos.reactivar');
+
+    // CU24 — Asignación de carrera definitiva (mérito + cupo)
+    Route::get('admision/preasignacion', [AsignacionCarreraController::class, 'vistaPreasignacion'])->name('admision.preasignacion');
+    Route::post('admision/ejecutar',     [AsignacionCarreraController::class, 'ejecutar'])->name('admision.ejecutar');
+    Route::get('admision/resultados',    [AsignacionCarreraController::class, 'vistaResultados'])->name('admision.resultados');
+
+    // CU25 — Lista final de admitidos
+    Route::get('admision/admitidos',           [ListaAdmitidosController::class, 'index'])->name('admision.admitidos');
+    Route::post('admision/admitidos/publicar', [ListaAdmitidosController::class, 'publicar'])->name('admision.publicar');
+    Route::get('admision/admitidos/exportar',  [ListaAdmitidosController::class, 'exportar'])->name('admision.exportar');
+
+    // CU26 — Reportes (PDF / Excel / HTML)
+    Route::get('reportes',               [ReporteController::class, 'index'])->name('reportes.index');
+    Route::get('reportes/{tipo}/pdf',    [ReporteController::class, 'pdf'])->name('reportes.pdf');
+    Route::get('reportes/{tipo}/excel',  [ReporteController::class, 'excel'])->name('reportes.excel');
+    Route::get('reportes/{tipo}/html',   [ReporteController::class, 'html'])->name('reportes.html');
+
+    // CU27 — Estadísticas
+    Route::get('estadisticas',          [EstadisticaController::class, 'dashboard'])->name('estadisticas.dashboard');
+    Route::get('estadisticas/docentes', [EstadisticaController::class, 'porDocente'])->name('estadisticas.docentes');
+    Route::get('estadisticas/grupos',   [EstadisticaController::class, 'porGrupo'])->name('estadisticas.grupos');
 
     // CU11 — Requisitos (sin destroy: solo archivar/reactivar)
     Route::resource('requisitos', RequisitoController::class)->except(['destroy']);
