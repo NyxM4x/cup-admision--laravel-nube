@@ -10,6 +10,7 @@
   try { $totalAulas = \App\Models\Aula::where('activo', true)->count(); } catch (\Exception $e) { $totalAulas = 0; }
   try { $totalBitacora = \App\Models\Bitacora::count(); } catch (\Exception $e) { $totalBitacora = 0; }
   try { $totalPostulantes = \App\Models\Postulante::count(); } catch (\Exception $e) { $totalPostulantes = 0; }
+  try { $totalPagos = \App\Models\Pago::where('estado', 'pendiente')->count(); } catch (\Exception $e) { $totalPagos = 0; }
 @endphp
 
 <div class="page-header mb-4">
@@ -57,7 +58,16 @@
       </div>
     </a>
   </div>
-  <div class="col-md-6 col-lg-4">  {{-- más ancho para destacar --}}
+  <div class="col-md-6 col-lg-2">
+    <a href="{{ route('dashboard.pagos') }}" class="text-decoration-none text-reset">
+      <div class="kpi-card kpi-danger h-100">
+        <div class="kpi-icon"><i class="bi bi-credit-card-fill"></i></div>
+        <div class="kpi-value">{{ $totalPagos }}</div>
+        <div class="kpi-label">Pagos pendientes</div>
+      </div>
+    </a>
+  </div>
+  <div class="col-md-6 col-lg-2">  {{-- más ancho para destacar --}}
     <a href="{{ route('postulantes.index') }}" class="text-decoration-none text-reset">
       <div class="kpi-card kpi-info h-100">
         <div class="kpi-icon"><i class="bi bi-person-vcard-fill"></i></div>
@@ -106,7 +116,12 @@
               <div><div style="font-weight:600;">Postulantes</div><small class="text-muted">Registro de postulantes</small></div>
             </a>
           </div>
-        </div>
+          <div class="col-md-6">
+            <a href="{{ route('dashboard.pagos') }}" class="d-flex align-items-center gap-3 p-3 text-decoration-none text-reset rounded" style="background:#f8f9fb;border:1px solid var(--cup-border);">
+              <div style="width:42px;height:42px;border-radius:10px;background:rgba(220,53,69,0.10);display:flex;align-items:center;justify-content:center;color:var(--cup-danger);"><i class="bi bi-credit-card fs-4"></i></div>
+              <div><div style="font-weight:600;">Gestionar pagos</div><small class="text-muted">Aprobar o rechazar pagos</small></div>
+            </a>
+          </div>
       </div>
     </div>
   </div>

@@ -27,7 +27,8 @@
         "psr-4": {
             "App\\": "app/",
             "Database\\Factories\\": "database/factories/",
-            "Database\\Seeders\\": "database/seeders/"
+            "Database\\Seeders\\": "database/seeders/",
+            "Stripe\\": "vendor/stripe/stripe-php/lib/"
         }
     },
     "autoload-dev": {
@@ -87,4 +88,5 @@
     },
     "minimum-stability": "stable",
     "prefer-stable": true
+    
 }
