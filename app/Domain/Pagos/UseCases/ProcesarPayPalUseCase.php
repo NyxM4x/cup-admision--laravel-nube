@@ -54,14 +54,13 @@ class ProcesarPayPalUseCase
                         'description' => 'Inscripcion CUP FICCT UAGRM',
                     ]],
                     'application_context' => [
-                        'return_url' => route('pagos.paypal.retorno'),
-                        'cancel_url' => route('pagos.paypal.cancelar-general'),
-                        'brand_name' => 'CUP FICCT UAGRM',
-                        'user_action' => 'PAY_NOW',
-                        'shipping_preference' => 'NO_SHIPPING',  // 👈 AGREGAR ESTO
+                        'return_url'          => route('pagos.paypal.retorno'),
+                        'cancel_url'          => route('pagos.paypal.cancelar-general'),
+                        'brand_name'          => 'CUP FICCT UAGRM',
+                        'user_action'         => 'PAY_NOW',
+                        'shipping_preference' => 'NO_SHIPPING',
                     ],
                 ]);
-
             if ($response->failed()) {
                 Log::error('PayPal Create Order Error:', ['response' => $response->json()]);
                 return ['order_id' => null, 'approve_url' => null, 'error' => 'Error al crear orden PayPal'];
