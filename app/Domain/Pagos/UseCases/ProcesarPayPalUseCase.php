@@ -67,10 +67,6 @@ class ProcesarPayPalUseCase
             }
 
             $order = $response->json();
-            Log::info('PayPal Order Response:', ['links' => $order['links'] ?? 'no links', 'status' => $order['status'] ?? 'no status']);
-            Log::info('PayPal Order Created:', ['order_id' => $order['id'] ?? 'unknown']);
-            Log::info('PayPal Approve URL:', ['url' => $approveUrl ?? 'null']);
-            Log::info('PayPal Return URL:', ['url' => route('pagos.paypal.retorno')]);
 
             Pago::updateOrCreate(
                 ['inscripcion_id' => $inscripcion->id, 'estado' => 'pendiente'],
@@ -86,6 +82,11 @@ class ProcesarPayPalUseCase
 
             $approveUrl = collect($order['links'] ?? [])
                 ->firstWhere('rel', 'approve')['href'] ?? null;
+
+            Log::info('PayPal Order Response:', ['links' => $order['links'] ?? 'no links', 'status' => $order['status'] ?? 'no status']);
+            Log::info('PayPal Order Created:', ['order_id' => $order['id'] ?? 'unknown']);
+            Log::info('PayPal Approve URL:', ['url' => $approveUrl ?? 'null']);
+            Log::info('PayPal Return URL:', ['url' => route('pagos.paypal.retorno')]);
 
             BitacoraLogger::registrar(
                 'PAYPAL_ORDEN_CREADA',

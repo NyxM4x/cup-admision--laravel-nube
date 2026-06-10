@@ -11,17 +11,10 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        // Forzar HTTPS en producción
-        if (app()->environment('production')) {
-            app(\Illuminate\Routing\UrlGenerator::class)->forceScheme('https');
-        }
-
         $middleware->alias([
             'permiso' => \App\Http\Middleware\ExigirPermiso::class,
             'cambio.password' => \App\Http\Middleware\ForzarCambioPassword::class,
         ]);
-
-        // Forzar cambio de password en primer login (stack web global, tras auth)
         $middleware->web(append: [
             \App\Http\Middleware\ForzarCambioPassword::class,
         ]);
