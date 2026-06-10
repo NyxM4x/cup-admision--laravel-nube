@@ -12,8 +12,8 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware): void {
         // Forzar HTTPS en producción
-        if (env('FORCE_HTTPS')) {
-            \Illuminate\Support\Facades\URL::forceScheme('https');
+        if (app()->environment('production')) {
+            app(\Illuminate\Routing\UrlGenerator::class)->forceScheme('https');
         }
 
         $middleware->alias([
