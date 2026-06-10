@@ -68,6 +68,8 @@ class ProcesarPayPalUseCase
 
             $order = $response->json();
             Log::info('PayPal Order Created:', ['order_id' => $order['id'] ?? 'unknown']);
+            Log::info('PayPal Approve URL:', ['url' => $approveUrl ?? 'null']);
+            Log::info('PayPal Return URL:', ['url' => route('pagos.paypal.retorno')]);
 
             Pago::updateOrCreate(
                 ['inscripcion_id' => $inscripcion->id, 'estado' => 'pendiente'],
