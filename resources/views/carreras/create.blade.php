@@ -60,6 +60,12 @@
         <input type="number" name="cupo_max" class="form-control" value="{{ old('cupo_max') }}" required min="1">
         <small class="text-muted">Este valor es el INPUT del algoritmo de ranking (CU23/CU24)</small>
       </div>
+      <div class="mb-3">
+        <label class="form-label">Monto de inscripción (Bs.)</label>
+        <input type="number" name="monto_inscripcion" class="form-control"
+              value="{{ old('monto_inscripcion', 50) }}" required min="1" step="0.01">
+        <small class="text-muted">Monto que el postulante pagará para inscribirse a esta carrera</small>
+      </div>
       <div class="mb-4">
         <label class="form-label">Fecha COFI <small class="text-muted">(opcional)</small></label>
         <input type="date" name="fecha_cofi" class="form-control" value="{{ old('fecha_cofi') }}">

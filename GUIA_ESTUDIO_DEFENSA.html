@@ -1,0 +1,1170 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Guía Defensa CUP</title>
+<style>
+  body { font-family: Arial, Helvetica, sans-serif; max-width: 820px; margin: auto;
+         padding: 24px; font-size: 12px; line-height: 1.55; color: #1f2937; }
+  h1 { color: #0D2C5E; border-bottom: 3px solid #FFD54F; padding-bottom: 6px; }
+  h2 { color: #1E5FA8; border-bottom: 1px solid #ccc; margin-top: 30px; padding-bottom: 4px; }
+  h3 { color: #0D2C5E; margin-top: 18px; }
+  code { background: #f4f4f4; padding: 2px 6px; border-radius: 3px; font-size: 11px; }
+  pre { background: #f4f4f4; padding: 12px; border-radius: 5px; overflow-x: auto; font-size: 10px; }
+  pre code { background: none; padding: 0; }
+  table { border-collapse: collapse; width: 100%; margin: 10px 0; }
+  th, td { border: 1px solid #ccc; padding: 6px; text-align: left; vertical-align: top; }
+  th { background: #0D2C5E; color: white; }
+  blockquote { border-left: 4px solid #FFD54F; margin: 10px 0; padding: 6px 14px;
+               background: #fffbea; color: #555; }
+  a { color: #1E5FA8; }
+  @media print {
+    body { max-width: none; padding: 0; }
+    h2 { page-break-before: auto; }
+    pre, table, blockquote { page-break-inside: avoid; }
+  }
+</style>
+</head>
+<body>
+<h1>📚 GUÍA DE ESTUDIO PARA DEFENSA — Sistema CUP UAGRM-FICCT</h1>
+<p><em>Generada el 2026-06-07 · Para la defensa del sábado · Revisión real del código en <code>main</code> (commit <code>06e890f</code>)</em></p>
+<blockquote>
+<p><strong>Manual del Defensor.</strong> Todo lo de aquí está verificado contra el código y la BD reales (conteos vía <code>tinker</code>, rutas vía <code>route:list</code>). Lo que no se encontró en el código está en la sección 14 (Avisos).</p>
+</blockquote>
+<hr />
+<h2>⚠️ AVISO: PROBLEMA CONOCIDO RESUELTO</h2>
+<p>El binario de PHP de Laragon se había perdido, pero <strong>ya fue reinstalado (PHP 8.3.21)</strong>.</p>
+<ul>
+<li><strong>Ruta:</strong> <code>C:\laragon\bin\php\php-8.3.30-Win32-vs16-x64\php.exe</code></li>
+<li><strong>Verificar:</strong> <code>C:\laragon\bin\php\php-8.3.30-Win32-vs16-x64\php.exe -v</code> → debe imprimir <code>PHP 8.3.21</code>.</li>
+<li>Como <code>php</code> <strong>no está en el PATH</strong>, en los comandos de esta guía reemplazá <code>php</code> por la ruta completa, o creá un alias.</li>
+</ul>
+<hr />
+<h2>0. CHECKLIST PRE-DEFENSA (LO PRIMERO, SÁBADO 8 AM)</h2>
+<pre><code>[ ] Abrir Laragon → Start All
+[ ] Verificar luz VERDE en PostgreSQL (y que php.exe -v responda 8.3.21)
+[ ] cd C:\laragon\www\cup-admision-laravel
+[ ] git pull origin main                 (si NyxM4x subió algo)
+[ ] php artisan migrate                  (por si hay migraciones nuevas)
+[ ] php artisan serve
+[ ] Abrir http://127.0.0.1:8000
+[ ] Login: admin@ficct.uagrm.edu.bo / admin1234
+[ ] Probar las 5 demos (ver sección 5.DEMOS)
+[ ] (OPCIONAL) Resetear la demo de asignación:
+        php artisan db:seed --class=PromediosDemoSeeder
+    ↳ vuelve a dejar 142 &quot;aprobados&quot; para mostrar la Pre-asignación desde cero.
+[ ] Tener este doc abierto en el celular o impreso
+[ ] Respirar profundo, conocés tu sistema 💪
+</code></pre>
+<blockquote>
+<p><strong>¡OJO con la Pre-asignación!</strong> La asignación CU24 <strong>ya fue ejecutada</strong> en la base actual (hay 142 <code>admitido_primera</code> y 0 <code>aprobado</code>). Si querés mostrar el ranking de pre-asignación “en vivo”, corré antes <code>php artisan db:seed --class=PromediosDemoSeeder</code> para restaurar los 142 aprobados.</p>
+</blockquote>
+<hr />
+<h2>1. RESUMEN EJECUTIVO</h2>
+<p><strong>¿Qué hace el sistema?</strong>
+El <strong>Sistema CUP (Curso Preuniversitario) de la FICCT-UAGRM</strong> digitaliza el proceso de admisión preuniversitaria de punta a punta: registra postulantes e inscripciones a carreras, valida su documentación, arma la estructura académica (materias, horarios, grupos, docentes y aulas) y, al final, <strong>asigna la carrera definitiva por mérito y cupo</strong>, publica la lista oficial de admitidos y emite reportes y estadísticas.</p>
+<p>Está construido sobre <strong>Laravel 13</strong> + <strong>PostgreSQL</strong>, con seguridad propia (usuarios, roles y permisos por matriz), <strong>bitácora inmutable</strong> de auditoría en cada acción relevante, y dashboards por rol. La UI usa <strong>Bootstrap 5</strong> con paleta institucional CUP y componentes reutilizables (buscador y modal de confirmación).</p>
+<p>Cubre el <strong>ciclo completo</strong>: el postulante se inscribe, un coordinador valida su documentación, y al cumplir los requisitos el sistema le <strong>crea el usuario y le envía las credenciales por email</strong>. Luego se generan grupos automáticamente y se asignan carreras según ranking de promedios y cupos.</p>
+<p><strong>Equipo:</strong></p>
+<ul>
+<li><strong>Ariany Claure Cota</strong> — seguridad transversal + gestión académica + postulantes/documentos + admisión final + reportes/estadísticas.</li>
+<li><strong>NyxM4x</strong> (compañero) — pagos + evaluación + ranking/podio + IA.</li>
+</ul>
+<p><strong>Reparto de Casos de Uso:</strong></p>
+<ul>
+<li><strong>Ariany:</strong> CU01–CU14 (Ciclo 1) + <strong>CU17, CU18, CU19, CU24, CU25, CU26, CU27</strong> (Ciclo 2). <em>(También CU20 “asignar aula”, ver Avisos.)</em></li>
+<li><strong>NyxM4x:</strong> CU15, CU16, CU20, CU21, CU22, CU23, CU28.</li>
+</ul>
+<p><strong>Stack tecnológico REAL</strong> (de <code>composer.json</code>):</p>
+<ul>
+<li><strong>Backend:</strong> PHP <strong>8.3.21</strong> + <strong>Laravel 13.11.2</strong> (<code>laravel/framework ^13.8</code>), <code>laravel/tinker</code>.</li>
+<li><strong>BD:</strong> PostgreSQL (extensión <code>unaccent</code> para búsquedas sin tildes).</li>
+<li><strong>Frontend:</strong> Blade + Bootstrap 5.3 + Bootstrap Icons (CDN).</li>
+<li><strong>PDF:</strong> <code>barryvdh/laravel-dompdf ^3.1</code> · <strong>Excel:</strong> <code>maatwebsite/excel ^3.1</code> · <strong>Gráficos:</strong> Chart.js 4.4 (CDN).</li>
+<li><strong>Email:</strong> Gmail SMTP.</li>
+</ul>
+<p><strong>Estado al 2026-06-07:</strong> <strong>21 CUs implementados de 28</strong> (CU01–CU14, CU17–CU19, CU24–CU27, + CU20). Faltan los del compañero: CU15, CU16, CU21, CU22, CU23, CU28.</p>
+<hr />
+<h2>2. ARQUITECTURA DEL SISTEMA</h2>
+<h3>2.1 Diagrama de capas</h3>
+<pre><code>┌─────────────────────────────────────────┐
+│  VISTAS Blade (resources/views)         │  92 vistas, Bootstrap 5
+└──────────────┬──────────────────────────┘
+               ↓   middleware: auth, permiso:, ForzarCambioPassword
+┌─────────────────────────────────────────┐
+│  CONTROLLERS (app/Http/Controllers)     │  30 controllers
+└──────────────┬──────────────────────────┘
+               ↓
+┌─────────────────────────────────────────┐
+│  SERVICES / USE CASES                    │  app/Services + app/Domain
+│  (algoritmo de asignación, login, CRUDs) │
+└──────────────┬──────────────────────────┘
+               ↓
+┌─────────────────────────────────────────┐
+│  MODELOS Eloquent (app/Models)          │  20 modelos
+└──────────────┬──────────────────────────┘
+               ↓
+┌─────────────────────────────────────────┐
+│  POSTGRESQL (Laragon, puerto 5432)      │  base: cup_admision
+└─────────────────────────────────────────┘
+        ▲
+        └── BitacoraLogger → tabla bitacora (INMUTABLE, transversal)
+</code></pre>
+<h3>2.2 Patrones usados (todos reales en el código)</h3>
+<table>
+<thead>
+<tr>
+<th>Patrón</th>
+<th>Dónde</th>
+<th>Qué hace</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Service Layer</strong></td>
+<td><code>app/Services/AsignacionCarreraService.php</code></td>
+<td>Algoritmo de asignación de carreras (CU24)</td>
+</tr>
+<tr>
+<td><strong>Use Case / Interactor</strong></td>
+<td><code>app/Domain/Seguridad/UseCases/AutenticarUsuarioUseCase.php</code>, <code>app/Domain/Usuarios/UseCases/*</code>, <code>app/Domain/Seguridad/UseCases/*Rol*</code>, <code>app/Domain/GestionGlobal/Aulas/UseCases/*</code></td>
+<td>Encapsulan reglas de negocio sensibles (login, CRUD de usuarios/roles/aulas)</td>
+</tr>
+<tr>
+<td><strong>Repository</strong></td>
+<td><code>app/Domain/.../Repositories/*</code> (BitacoraRepository, RolRepository, UsuarioRepository, AulaRepository)</td>
+<td>Acceso a datos encapsulado</td>
+</tr>
+<tr>
+<td><strong>Mailable</strong></td>
+<td><code>app/Mail/HabilitacionPostulanteMail.php</code>, <code>app/Mail/RecuperarPasswordMail.php</code></td>
+<td>Emails</td>
+</tr>
+<tr>
+<td><strong>Middleware</strong></td>
+<td><code>app/Http/Middleware/ExigirPermiso.php</code>, <code>app/Http/Middleware/ForzarCambioPassword.php</code></td>
+<td>Control de permisos por ruta y cambio de clave obligatorio</td>
+</tr>
+<tr>
+<td><strong>Blade Components</strong></td>
+<td><code>resources/views/components/buscador-cup.blade.php</code>, <code>modal-confirmar.blade.php</code></td>
+<td>UI reutilizable</td>
+</tr>
+<tr>
+<td><strong>Export</strong></td>
+<td><code>app/Exports/GenericExport.php</code></td>
+<td>Generación de Excel genérica</td>
+</tr>
+<tr>
+<td><strong>Auditoría transversal</strong></td>
+<td><code>app/Domain/Bitacora/Services/BitacoraLogger.php</code></td>
+<td>Log de cada acción (Observer-like)</td>
+</tr>
+<tr>
+<td><strong>Soft-delete lógico</strong></td>
+<td>columna <code>activo</code> en casi todas las tablas</td>
+<td>Archivar en vez de borrar</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2>3. BASE DE DATOS</h2>
+<h3>3.1 ¿Dónde vive físicamente?</h3>
+<ul>
+<li><strong>Motor:</strong> PostgreSQL en <strong>Laragon</strong>, puerto <strong>5432</strong>.</li>
+<li><strong>Base:</strong> <code>cup_admision</code> · <strong>Usuario:</strong> <code>postgres</code> · <strong>Conexión:</strong> <code>pgsql</code> (de <code>.env</code>).</li>
+<li><strong>Config Laravel:</strong> <code>config/database.php</code> + <code>.env</code> (<code>DB_CONNECTION=pgsql</code>, <code>DB_DATABASE=cup_admision</code>).</li>
+<li><strong>DBeaver/pgAdmin:</strong> Host <code>127.0.0.1</code>, Puerto <code>5432</code>, Base <code>cup_admision</code>, Usuario <code>postgres</code>, contraseña la del <code>.env</code>.</li>
+<li><strong>Consola:</strong>
+<pre><code>cd C:\laragon\bin\postgresql\&lt;version&gt;\bin
+psql -U postgres -d cup_admision
+\dt                       -- listar tablas
+SELECT count(*) FROM postulantes;
+</code></pre>
+</li>
+</ul>
+<h3>3.2 Las 22 tablas (conteos REALES verificados el 2026-06-07)</h3>
+<table>
+<thead>
+<tr>
+<th>Tabla</th>
+<th>Módulo</th>
+<th>Descripción</th>
+<th>Registros</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>users</code></td>
+<td>Seguridad</td>
+<td>Cuentas de acceso (login, rol, bloqueo)</td>
+<td><strong>6</strong></td>
+</tr>
+<tr>
+<td><code>roles</code></td>
+<td>Seguridad</td>
+<td>Roles del sistema</td>
+<td><strong>6</strong></td>
+</tr>
+<tr>
+<td><code>permisos</code></td>
+<td>Seguridad</td>
+<td>Permisos atómicos (<code>usuarios.ver</code>, …)</td>
+<td><strong>14</strong></td>
+</tr>
+<tr>
+<td><code>rol_permiso</code></td>
+<td>Seguridad</td>
+<td>Matriz Rol × Permiso</td>
+<td><strong>26</strong></td>
+</tr>
+<tr>
+<td><code>bitacora</code></td>
+<td>Auditoría</td>
+<td>Registro inmutable de acciones</td>
+<td><strong>98</strong> (28 acciones distintas)</td>
+</tr>
+<tr>
+<td><code>periodos</code></td>
+<td>Académico</td>
+<td>Periodos del CUP</td>
+<td><strong>1</strong> (activo)</td>
+</tr>
+<tr>
+<td><code>carreras</code></td>
+<td>Académico</td>
+<td>Carreras a postular</td>
+<td><strong>5</strong></td>
+</tr>
+<tr>
+<td><code>cupo_carreras</code></td>
+<td>Académico</td>
+<td>Cupo por carrera/periodo</td>
+<td><strong>5</strong></td>
+</tr>
+<tr>
+<td><code>materias</code></td>
+<td>Académico</td>
+<td>Materias (MAT, FIS, COM, ING)</td>
+<td><strong>4</strong> (todas activas)</td>
+</tr>
+<tr>
+<td><code>aulas</code></td>
+<td>Académico</td>
+<td>Aulas físicas</td>
+<td><strong>15</strong></td>
+</tr>
+<tr>
+<td><code>requisitos</code></td>
+<td>Académico</td>
+<td>Requisitos documentales</td>
+<td><strong>5</strong></td>
+</tr>
+<tr>
+<td><code>profesiones</code></td>
+<td>Académico</td>
+<td>Profesiones de docentes</td>
+<td><strong>6</strong></td>
+</tr>
+<tr>
+<td><code>personas</code></td>
+<td>Núcleo</td>
+<td>Datos personales (CI, nombre, correo)</td>
+<td><strong>506</strong></td>
+</tr>
+<tr>
+<td><code>postulantes</code></td>
+<td>Inscripción</td>
+<td>Postulante (persona + colegio)</td>
+<td><strong>500</strong></td>
+</tr>
+<tr>
+<td><code>inscripciones</code></td>
+<td>Inscripción</td>
+<td>Inscripción a un periodo</td>
+<td><strong>500</strong></td>
+</tr>
+<tr>
+<td><code>postulacion_carreras</code></td>
+<td>Inscripción</td>
+<td>Preferencias 1ra/2da</td>
+<td><strong>778</strong></td>
+</tr>
+<tr>
+<td><code>documentos_postulantes</code></td>
+<td>Inscripción</td>
+<td>Checklist de requisitos</td>
+<td><strong>15</strong></td>
+</tr>
+<tr>
+<td><code>docentes</code></td>
+<td>Académico</td>
+<td>Docente (persona + profesión)</td>
+<td><strong>6</strong></td>
+</tr>
+<tr>
+<td><code>horarios</code></td>
+<td>Académico</td>
+<td>Bloques horarios fijos</td>
+<td><strong>6</strong></td>
+</tr>
+<tr>
+<td><code>grupos</code></td>
+<td>Académico</td>
+<td>Grupos por materia/periodo</td>
+<td><strong>0</strong></td>
+</tr>
+<tr>
+<td><code>grupo_postulante</code></td>
+<td>Académico</td>
+<td>Alumnos por grupo</td>
+<td><strong>0</strong></td>
+</tr>
+<tr>
+<td><code>resultados_admision</code></td>
+<td>Admisión</td>
+<td>Promedio, ranking, carrera asignada</td>
+<td><strong>200</strong></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Detalle <code>resultados_admision</code> (200):</strong> <code>admitido_primera = 142</code>, <code>reprobado = 58</code>, <code>aprobado = 0</code> (la asignación ya se ejecutó).
+<em>(Tablas técnicas de Laravel adicionales: <code>cache</code>, <code>jobs</code>, <code>sessions</code>, <code>password_reset_tokens</code>.)</em></p>
+<blockquote>
+<p>Comando para re-verificar conteos:</p>
+<pre><code>php artisan tinker --execute=&quot;foreach(['users','roles','permisos','rol_permiso','bitacora','periodos','carreras','cupo_carreras','materias','aulas','requisitos','profesiones','personas','postulantes','inscripciones','postulacion_carreras','documentos_postulantes','docentes','horarios','grupos','grupo_postulante','resultados_admision'] as \$t){ echo str_pad(\$t,28).' = '.DB::table(\$t)-&gt;count().PHP_EOL; }&quot;
+</code></pre>
+</blockquote>
+<h3>3.3 Cómo se crea una tabla nueva</h3>
+<ul>
+<li>Crear migración: <code>php artisan make:migration crear_tabla_x</code></li>
+<li>Ubicación: <code>database/migrations/AAAA_MM_DD_HHMMSS_crear_tabla_x.php</code></li>
+<li><strong>Ejemplo real</strong> (<code>2026_06_05_223747_create_resultados_admision_table.php</code>, resumido):
+<pre><code class="language-php">Schema::create('resultados_admision', function (Blueprint $table) {
+    $table-&gt;id();
+    $table-&gt;foreignId('postulante_id')-&gt;constrained('postulantes')-&gt;cascadeOnDelete();
+    $table-&gt;foreignId('periodo_id')-&gt;constrained('periodos')-&gt;cascadeOnDelete();
+    $table-&gt;decimal('promedio_final', 5, 2);
+    $table-&gt;integer('posicion_ranking_general')-&gt;nullable();
+    $table-&gt;foreignId('carrera_asignada_id')-&gt;nullable()-&gt;constrained('carreras')-&gt;nullOnDelete();
+    $table-&gt;enum('estado_admision', ['aprobado','reprobado','admitido_primera','admitido_segunda','no_admitido_sin_cupo','lista_espera']);
+    $table-&gt;timestamp('fecha_asignacion')-&gt;nullable();
+    $table-&gt;text('observacion')-&gt;nullable();
+    $table-&gt;timestamps();
+    $table-&gt;index('estado_admision');
+    $table-&gt;unique(['postulante_id', 'periodo_id']);
+});
+</code></pre>
+</li>
+<li>Aplicar: <code>php artisan migrate</code> · Revertir última: <code>php artisan migrate:rollback</code> · Estado: <code>php artisan migrate:status</code></li>
+<li><strong>Total de migraciones en el proyecto: 33.</strong></li>
+</ul>
+<h3>3.4 Cómo se cargan datos demo (6 seeders en <code>database/seeders/</code>)</h3>
+<table>
+<thead>
+<tr>
+<th>Seeder</th>
+<th>Carga</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>DatabaseSeeder</code></td>
+<td>Orquestador: llama a los demás + admin, periodos, carreras, materias, requisitos, profesiones, docentes</td>
+</tr>
+<tr>
+<td><code>SeguridadSeeder</code></td>
+<td>Roles, permisos y matriz rol_permiso</td>
+</tr>
+<tr>
+<td><code>AulasSeeder</code></td>
+<td>Aulas</td>
+</tr>
+<tr>
+<td><code>HorariosSeeder</code></td>
+<td>6 horarios fijos (M1/M2/T1/T2/N1/N2)</td>
+</tr>
+<tr>
+<td><code>DatosDemoSeeder</code></td>
+<td>500 postulantes + inscripciones + preferencias de carrera</td>
+</tr>
+<tr>
+<td><code>PromediosDemoSeeder</code></td>
+<td>200 resultados con promedios (para CU24)</td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li>Todo: <code>php artisan db:seed</code> · Uno: <code>php artisan db:seed --class=PromediosDemoSeeder</code> · Reset total: <code>php artisan migrate:fresh --seed</code> <strong>(CUIDADO: borra TODO).</strong></li>
+</ul>
+<h3>3.5 Diagrama de relaciones</h3>
+<pre><code>users ── rol_id ──► roles ──&lt; rol_permiso &gt;── permisos
+
+personas ──1:1── postulantes ──&lt; inscripciones ──&lt; postulacion_carreras &gt;── carreras
+                                     │                                         │
+                                     ├──&lt; documentos_postulantes &gt;── requisitos │
+                                     └─ periodo_id ──► periodos ──&lt; cupo_carreras
+
+personas ──1:1── docentes ──&lt; grupos &gt;── materias
+                                │ ├──► horarios
+                                │ └──► aulas
+                                └──&lt; grupo_postulante &gt;── postulantes
+
+postulantes ──&lt; resultados_admision &gt;── carreras (carrera_asignada)
+                       └─ periodo_id ──► periodos
+
+bitacora ── transversal: registra TODAS las acciones (inmutable)
+</code></pre>
+<hr />
+<h2>4. ESTRUCTURA DEL CÓDIGO</h2>
+<h3>4.1 Controllers (<code>app/Http/Controllers/</code>) — 30 archivos</h3>
+<table>
+<thead>
+<tr>
+<th>Controller</th>
+<th>Métodos clave</th>
+<th>CU</th>
+<th>URL base</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>Auth/AuthenticatedSessionController</code></td>
+<td>store, destroy</td>
+<td><strong>CU01</strong></td>
+<td><code>/login</code></td>
+</tr>
+<tr>
+<td><code>Auth/PasswordResetLinkController</code> + <code>NewPasswordController</code></td>
+<td>create, store</td>
+<td><strong>CU02</strong></td>
+<td><code>/forgot-password</code>, <code>/reset-password</code></td>
+</tr>
+<tr>
+<td><code>Auth/CambioPasswordObligatorioController</code></td>
+<td>show, update</td>
+<td>(1er login)</td>
+<td><code>/password/cambio-obligatorio</code></td>
+</tr>
+<tr>
+<td><code>Seguridad/UsuarioController</code></td>
+<td>index, store, update, destroy, reactivar</td>
+<td><strong>CU03</strong></td>
+<td><code>/seguridad/usuarios</code></td>
+</tr>
+<tr>
+<td><code>Seguridad/RolController</code></td>
+<td>index, store, update, destroy, reactivar</td>
+<td><strong>CU04</strong></td>
+<td><code>/seguridad/roles</code></td>
+</tr>
+<tr>
+<td><code>Seguridad/PermisoController</code></td>
+<td>index, matriz</td>
+<td><strong>CU05</strong></td>
+<td><code>/seguridad/permisos</code></td>
+</tr>
+<tr>
+<td><code>Bitacora/BitacoraController</code></td>
+<td>index, show</td>
+<td><strong>CU06</strong></td>
+<td><code>/bitacora</code></td>
+</tr>
+<tr>
+<td><code>PeriodoController</code></td>
+<td>index, store, update, archivar, reactivar, <strong>cerrar</strong></td>
+<td><strong>CU07</strong></td>
+<td><code>/periodos</code></td>
+</tr>
+<tr>
+<td><code>CarreraController</code></td>
+<td>index, store, update, archivar, reactivar</td>
+<td><strong>CU08</strong></td>
+<td><code>/carreras</code></td>
+</tr>
+<tr>
+<td><code>MateriaController</code></td>
+<td>index, store, update, archivar, reactivar</td>
+<td><strong>CU09</strong></td>
+<td><code>/materias</code></td>
+</tr>
+<tr>
+<td><code>GestionGlobal/AulaController</code></td>
+<td>index, store, update, destroy, reactivar</td>
+<td><strong>CU10</strong></td>
+<td><code>/gestion-global/aulas</code></td>
+</tr>
+<tr>
+<td><code>RequisitoController</code></td>
+<td>index, store, update, archivar, reactivar</td>
+<td><strong>CU11</strong></td>
+<td><code>/requisitos</code></td>
+</tr>
+<tr>
+<td><code>DocenteController</code></td>
+<td>index, store, update, destroy, reactivar</td>
+<td><strong>CU12</strong></td>
+<td><code>/docentes</code></td>
+</tr>
+<tr>
+<td><code>PostulanteController</code></td>
+<td>index, store, <strong>verificarCI</strong>, archivar, reactivar</td>
+<td><strong>CU13</strong></td>
+<td><code>/postulantes</code></td>
+</tr>
+<tr>
+<td><code>DocumentoPostulanteController</code></td>
+<td>index, show, <strong>actualizar</strong></td>
+<td><strong>CU14</strong></td>
+<td><code>/documentos</code></td>
+</tr>
+<tr>
+<td><code>HorarioController</code></td>
+<td>index, store, update, archivar, reactivar</td>
+<td><strong>CU19</strong></td>
+<td><code>/horarios</code></td>
+</tr>
+<tr>
+<td><code>GrupoController</code></td>
+<td>index, store, update, <strong>generarAutomaticos, asignarDocente, asignarAula</strong></td>
+<td><strong>CU17/18/20</strong></td>
+<td><code>/grupos</code></td>
+</tr>
+<tr>
+<td><code>AsignacionCarreraController</code></td>
+<td>vistaPreasignacion, <strong>ejecutar</strong>, vistaResultados</td>
+<td><strong>CU24</strong></td>
+<td><code>/admision/...</code></td>
+</tr>
+<tr>
+<td><code>ListaAdmitidosController</code></td>
+<td>index, <strong>publicar, exportar</strong></td>
+<td><strong>CU25</strong></td>
+<td><code>/admision/admitidos</code></td>
+</tr>
+<tr>
+<td><code>ReporteController</code></td>
+<td>index, <strong>pdf, excel, html</strong></td>
+<td><strong>CU26</strong></td>
+<td><code>/reportes</code></td>
+</tr>
+<tr>
+<td><code>EstadisticaController</code></td>
+<td>dashboard, porDocente, porGrupo</td>
+<td><strong>CU27</strong></td>
+<td><code>/estadisticas</code></td>
+</tr>
+<tr>
+<td><code>ProfileController</code></td>
+<td>edit, update, destroy</td>
+<td>(perfil)</td>
+<td><code>/profile</code></td>
+</tr>
+</tbody>
+</table>
+<h3>4.2 Models (<code>app/Models/</code>) — 20 archivos</h3>
+<table>
+<thead>
+<tr>
+<th>Modelo</th>
+<th>Tabla</th>
+<th>Relaciones / casts</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>User</code></td>
+<td>users</td>
+<td><code>belongsTo Rol</code>; <code>tienePermiso()</code>; casts password=hashed, activo, debe_cambiar_password</td>
+</tr>
+<tr>
+<td><code>Rol</code></td>
+<td>roles</td>
+<td><code>belongsToMany Permiso</code>; <code>hasMany User</code></td>
+</tr>
+<tr>
+<td><code>Permiso</code></td>
+<td>permisos</td>
+<td><code>belongsToMany Rol</code></td>
+</tr>
+<tr>
+<td><code>Bitacora</code></td>
+<td>bitacora</td>
+<td><code>belongsTo User</code>; <strong>INMUTABLE</strong> (update/delete lanzan excepción); sin updated_at</td>
+</tr>
+<tr>
+<td><code>Periodo</code></td>
+<td>periodos</td>
+<td>casts de fechas + activo</td>
+</tr>
+<tr>
+<td><code>Carrera</code></td>
+<td>carreras</td>
+<td><code>hasMany CupoCarrera</code>; <code>cupoActivo()</code> hasOne</td>
+</tr>
+<tr>
+<td><code>CupoCarrera</code></td>
+<td>cupo_carreras</td>
+<td><code>belongsTo Carrera</code>, <code>belongsTo Periodo</code></td>
+</tr>
+<tr>
+<td><code>Materia</code></td>
+<td>materias</td>
+<td>casts activo, dias_dictado=array</td>
+</tr>
+<tr>
+<td><code>Aula</code></td>
+<td>aulas</td>
+<td>scope <code>activos</code>; capacidad=int</td>
+</tr>
+<tr>
+<td><code>Requisito</code></td>
+<td>requisitos</td>
+<td>(CRUD por periodo)</td>
+</tr>
+<tr>
+<td><code>Profesion</code></td>
+<td>profesiones</td>
+<td>(catálogo docentes)</td>
+</tr>
+<tr>
+<td><code>Persona</code></td>
+<td>personas</td>
+<td>base de postulantes y docentes</td>
+</tr>
+<tr>
+<td><code>Postulante</code></td>
+<td>postulantes</td>
+<td><code>belongsTo Persona</code>; <code>hasMany Inscripcion</code>; <code>inscripcionActiva()</code>; activo</td>
+</tr>
+<tr>
+<td><code>Inscripcion</code></td>
+<td>inscripciones</td>
+<td><code>belongsTo Postulante/Periodo</code>; <code>hasMany PostulacionCarrera/DocumentoPostulante</code></td>
+</tr>
+<tr>
+<td><code>PostulacionCarrera</code></td>
+<td>postulacion_carreras</td>
+<td><code>belongsTo Inscripcion/Carrera</code>; <code>prioridad</code></td>
+</tr>
+<tr>
+<td><code>DocumentoPostulante</code></td>
+<td>documentos_postulantes</td>
+<td><code>belongsTo Inscripcion/Requisito</code>; cumplido=bool</td>
+</tr>
+<tr>
+<td><code>Docente</code></td>
+<td>docentes</td>
+<td><code>belongsTo Persona/Profesion</code>; activo</td>
+</tr>
+<tr>
+<td><code>Horario</code></td>
+<td>horarios</td>
+<td><code>hasMany Grupo</code>; accessor <code>rango</code></td>
+</tr>
+<tr>
+<td><code>Grupo</code></td>
+<td>grupos</td>
+<td><code>belongsTo</code> Periodo/Materia/Horario/Aula/Docente; <code>belongsToMany Postulante</code></td>
+</tr>
+<tr>
+<td><code>ResultadoAdmision</code></td>
+<td>resultados_admision</td>
+<td><code>belongsTo Postulante/Periodo</code>; <code>carreraAsignada()</code>; promedio_final=decimal:2</td>
+</tr>
+</tbody>
+</table>
+<h3>4.3 Vistas Blade (<code>resources/views/</code>)</h3>
+<ul>
+<li><strong><code>layouts/</code></strong> → <code>base.blade.php</code> (navbar, paleta CUP, Bootstrap, modal global).</li>
+<li><strong><code>components/</code></strong> → <code>buscador-cup.blade.php</code>, <code>modal-confirmar.blade.php</code> (+ componentes de Breeze).</li>
+<li><strong><code>emails/</code></strong> → <code>habilitacion-postulante.blade.php</code>, <code>recuperar-password.blade.php</code>.</li>
+<li><strong>Por módulo:</strong> <code>auth/</code>, <code>dashboards/</code>, <code>seguridad/</code>, <code>bitacora/</code>, <code>periodos/</code>, <code>carreras/</code>, <code>materias/</code>, <code>requisitos/</code>, <code>gestion-global/</code> (aulas), <code>docentes/</code>, <code>postulantes/</code>, <code>documentos/</code>, <code>horarios/</code>, <code>grupos/</code>, <code>admision/</code> (+ <code>admision/pdf/</code>), <code>reportes/</code> (+ <code>reportes/pdf/</code>), <code>estadisticas/</code>, <code>profile/</code>.</li>
+</ul>
+<h3>4.4 Rutas (<code>routes/web.php</code>) — 136 rutas</h3>
+<ul>
+<li><strong>Públicas:</strong> <code>/</code> (redirige a login o dashboard según sesión), <code>/login</code>, <code>/forgot-password</code>, <code>/reset-password</code>.</li>
+<li><strong>Autenticadas</strong> (<code>Route::middleware('auth')</code>): todo el resto. Las de seguridad agregan <code>-&gt;middleware('permiso:codigo')</code>.</li>
+<li>Agrupadas por módulo: dashboards, perfil, cambio de password, seguridad (usuarios/roles/permisos), académico (periodos/carreras/materias/horarios/grupos/requisitos), aulas, docentes, postulantes, documentos, admisión, reportes, estadísticas, bitácora.</li>
+<li>Ver todas: <code>php artisan route:list --except-vendor</code>.</li>
+</ul>
+<hr />
+<h2>5. LOS CASOS DE USO IMPLEMENTADOS (uno por uno)</h2>
+<blockquote>
+<p>Formato: qué hace · actor · URL · controller@método · modelo · vista · bitácora · validaciones · cómo probarlo.</p>
+</blockquote>
+<h3>CU01 — Iniciar sesión</h3>
+<ul>
+<li><strong>Qué hace:</strong> autentica y redirige al dashboard según rol. <strong>Actor:</strong> todos.</li>
+<li><strong>URL:</strong> <code>/login</code> · <strong>Controller:</strong> <code>Auth/AuthenticatedSessionController@store</code> → <code>AutenticarUsuarioUseCase@ejecutar</code>.</li>
+<li><strong>Modelo:</strong> <code>User</code>. <strong>Vista:</strong> <code>auth/login.blade.php</code>.</li>
+<li><strong>Bitácora:</strong> <code>LOGIN_OK</code>, <code>LOGIN_FAIL</code>, <code>LOGIN_LOCKED</code>, <code>LOGIN_BLOQUEADO</code>, <code>LOGIN_INACTIVO</code>.</li>
+<li><strong>Validaciones/reglas:</strong> usuario activo; <strong>bloqueo a los 3 intentos</strong> por 15 min; <code>session()-&gt;regenerate()</code>.</li>
+<li><strong>Demo:</strong> entrar a <code>/</code> → redirige a <code>/login</code> → <code>admin@ficct.uagrm.edu.bo</code> / <code>admin1234</code>.</li>
+</ul>
+<h3>CU02 — Recuperar contraseña + cambio obligatorio (1er login)</h3>
+<ul>
+<li><strong>URL:</strong> <code>/forgot-password</code>, <code>/reset-password</code>, <code>/password/cambio-obligatorio</code>.</li>
+<li><strong>Controllers:</strong> <code>Auth/PasswordResetLinkController</code>, <code>Auth/NewPasswordController</code>, <code>Auth/CambioPasswordObligatorioController</code>.</li>
+<li><strong>Mailable:</strong> <code>RecuperarPasswordMail</code> · <strong>Vista email:</strong> <code>emails/recuperar-password.blade.php</code>.</li>
+<li><strong>Middleware:</strong> <code>ForzarCambioPassword</code> obliga a cambiar la clave temporal antes de usar el sistema.</li>
+</ul>
+<h3>CU03 — Usuarios · CU04 — Roles · CU05 — Permisos</h3>
+<ul>
+<li><strong>URLs:</strong> <code>/seguridad/usuarios</code>, <code>/seguridad/roles</code>, <code>/seguridad/permisos</code>.</li>
+<li><strong>Controllers:</strong> <code>Seguridad/UsuarioController</code>, <code>RolController</code>, <code>PermisoController</code> (con UseCases en <code>app/Domain/Usuarios</code> y <code>app/Domain/Seguridad</code>).</li>
+<li><strong>Reglas:</strong> inactivación lógica; rol <strong>Administrador</strong> no se inactiva; matriz de permisos editable. <strong>Permisos:</strong> <code>usuarios.*</code>, <code>roles.*</code>, <code>permisos.gestionar</code>.</li>
+<li><strong>Bitácora:</strong> acciones de creación/edición/inactivación de usuarios y roles.</li>
+</ul>
+<h3>CU06 — Bitácora (solo lectura)</h3>
+<ul>
+<li><strong>URL:</strong> <code>/bitacora</code> · <strong>Controller:</strong> <code>Bitacora/BitacoraController</code> · <strong>Permiso:</strong> <code>bitacora.ver</code>.</li>
+<li><strong>Regla:</strong> tabla <strong>inmutable</strong> (el modelo prohíbe update/delete). <strong>Demo:</strong> mostrar el listado filtrable de acciones.</li>
+</ul>
+<h3>CU07 — Periodos</h3>
+<ul>
+<li><strong>URL:</strong> <code>/periodos</code> · <strong>Controller:</strong> <code>PeriodoController</code>.</li>
+<li><strong>Reglas:</strong> un solo periodo activo; <strong>archivar/reactivar</strong>; <strong>cerrar</strong> (inactiva periodo + postulantes, conserva inscripciones).</li>
+<li><strong>Bitácora:</strong> <code>PERIODO_ARCHIVADO</code>, <code>PERIODO_REACTIVADO</code>, <code>PERIODO_CERRADO</code>.</li>
+</ul>
+<h3>CU08 — Carreras · CU09 — Materias · CU11 — Requisitos</h3>
+<ul>
+<li><strong>URLs:</strong> <code>/carreras</code>, <code>/materias</code>, <code>/requisitos</code>.</li>
+<li><strong>Reglas:</strong> buscador sin tildes (<code>unaccent</code>), filtro Activos/Inactivos/Todos, <strong>archivar/reactivar</strong> (sin borrado físico: <code>destroy</code> excluido del resource).</li>
+<li><strong>Bitácora:</strong> <code>CARRERA_ARCHIVADA/REACTIVADA</code>, <code>MATERIA_ARCHIVADA/REACTIVADA</code>, <code>REQUISITO_ARCHIVADO/REACTIVADO</code>.</li>
+</ul>
+<h3>CU10 — Aulas</h3>
+<ul>
+<li><strong>URL:</strong> <code>/gestion-global/aulas</code> · <strong>Controller:</strong> <code>GestionGlobal/AulaController</code> (+ UseCases <code>app/Domain/GestionGlobal/Aulas/</code>). Filtros + inactivar/reactivar.</li>
+</ul>
+<h3>CU12 — Docentes</h3>
+<ul>
+<li><strong>URL:</strong> <code>/docentes</code> · <strong>Controller:</strong> <code>DocenteController</code>. Buscador (nombre/CI/profesión), inactivar/reactivar.</li>
+</ul>
+<h3>CU13 — Registrar postulante (+ reinscripción)</h3>
+<ul>
+<li><strong>Qué hace:</strong> crea persona + postulante + inscripción + preferencias. Si el <strong>CI ya existe</strong>, propone <strong>reinscripción</strong> (reusa persona, nueva inscripción, reactiva si estaba archivado).</li>
+<li><strong>URL:</strong> <code>/postulantes</code>, <code>/postulantes/create</code> · <strong>Controller:</strong> <code>PostulanteController@store</code> y <code>@verificarCI</code> (AJAX).</li>
+<li><strong>Validaciones:</strong> CI/nombre/colegio/carrera_1 requeridos; sin duplicar inscripción en el periodo activo.</li>
+<li><strong>Bitácora:</strong> <code>POSTULANTE_CREADO</code>, <code>POSTULANTE_REINSCRITO</code>, <code>POSTULANTE_ARCHIVADO/REACTIVADO</code>.</li>
+<li><strong>Demo:</strong> en <code>/postulantes/create</code> escribir CI <code>8000001</code> y salir del campo → modal “Persona ya registrada”.</li>
+</ul>
+<h3>CU14 — Documentos / Habilitación</h3>
+<ul>
+<li><strong>Qué hace:</strong> checklist de requisitos; al cumplir <strong>todos los obligatorios</strong>, crea el usuario del postulante y le <strong>envía credenciales por email</strong>.</li>
+<li><strong>URL:</strong> <code>/documentos</code>, <code>/documentos/{inscripcion}</code> · <strong>Controller:</strong> <code>DocumentoPostulanteController@actualizar</code> → <code>habilitarPostulante</code>.</li>
+<li><strong>Reglas:</strong> habilita solo si todos los obligatorios están tildados; <strong>idempotente</strong> (no reenvía email si el usuario ya existe).</li>
+<li><strong>Mailable:</strong> <code>HabilitacionPostulanteMail</code> · <strong>Vista email:</strong> <code>emails/habilitacion-postulante.blade.php</code> · <strong>Bitácora:</strong> <code>POSTULANTE_HABILITADO</code>.</li>
+</ul>
+<h3>CU17 — Generar grupos (automático)</h3>
+<ul>
+<li><strong>URL:</strong> <code>/grupos/generar-automaticos</code> · <strong>Controller:</strong> <code>GrupoController@generarAutomaticos</code>.</li>
+<li><strong>Regla:</strong> crea <code>CEIL(habilitados / 70)</code> grupos por materia activa; cupo 70; idempotente. <strong>Bitácora:</strong> <code>GRUPOS_GENERADOS_AUTO</code>.</li>
+</ul>
+<h3>CU18 — Asignar docente</h3>
+<ul>
+<li><strong>URL (POST):</strong> <code>/grupos/{grupo}/asignar-docente</code> · <strong>Regla:</strong> máximo 4 grupos por docente/periodo. <strong>Bitácora:</strong> <code>DOCENTE_ASIGNADO</code>.</li>
+</ul>
+<h3>CU19 — Horarios</h3>
+<ul>
+<li><strong>URL:</strong> <code>/horarios</code> · <strong>Controller:</strong> <code>HorarioController</code>. 6 horarios fijos; CRUD; valida <code>hora_fin &gt; hora_inicio</code>. <strong>Bitácora:</strong> <code>HORARIO_CREADO/EDITADO/ARCHIVADO/REACTIVADO</code>.</li>
+</ul>
+<h3>CU20 — Asignar aula <em>(implementado, ver Avisos)</em></h3>
+<ul>
+<li><strong>URL (POST):</strong> <code>/grupos/{grupo}/asignar-aula</code> · <strong>Reglas:</strong> <code>cupo_max ≤ capacidad</code>; sin choque aula+horario. <strong>Bitácora:</strong> <code>AULA_ASIGNADA</code>.</li>
+</ul>
+<h3>CU24 — Asignar carrera definitiva</h3>
+<ul>
+<li><strong>URL:</strong> <code>/admision/preasignacion</code>, <code>/admision/ejecutar</code>, <code>/admision/resultados</code>.</li>
+<li><strong>Controller:</strong> <code>AsignacionCarreraController</code> · <strong>Service:</strong> <code>AsignacionCarreraService@ejecutarAsignacion</code> (transaccional).</li>
+<li><strong>Modelo:</strong> <code>ResultadoAdmision</code>. <strong>Bitácora:</strong> <code>ASIGNACION_EJECUTADA</code>.</li>
+</ul>
+<h3>CU25 — Lista final de admitidos</h3>
+<ul>
+<li><strong>URL:</strong> <code>/admision/admitidos</code> (+ <code>publicar</code>, <code>exportar</code>) · <strong>Controller:</strong> <code>ListaAdmitidosController</code>.</li>
+<li>Filtros periodo/estado/carrera + búsqueda; <strong>Publicar</strong> (marca <code>periodos.lista_publicada</code> + fecha); <strong>Exportar PDF</strong>. <strong>Bitácora:</strong> <code>LISTA_PUBLICADA</code>.</li>
+</ul>
+<h3>CU26 — Reportes</h3>
+<ul>
+<li><strong>URL:</strong> <code>/reportes</code>, <code>/reportes/{tipo}/{pdf|excel|html}</code> · <strong>Controller:</strong> <code>ReporteController</code>.</li>
+<li>5 reportes (inscritos, aprobados_reprobados, admitidos_por_carrera, promedios_por_materia, bitácora) × 3 formatos.</li>
+</ul>
+<h3>CU27 — Estadísticas</h3>
+<ul>
+<li><strong>URL:</strong> <code>/estadisticas</code>, <code>/estadisticas/docentes</code>, <code>/estadisticas/grupos</code> · <strong>Controller:</strong> <code>EstadisticaController</code>.</li>
+<li>Gráficos Chart.js (torta por carrera, barras aprob/reprob, barras promedio por materia) + tablas por docente/grupo.</li>
+</ul>
+<h3>5.DEMOS — Las 5 demos para el jurado</h3>
+<ol>
+<li><strong>Login + redirect:</strong> <code>/</code> → login → dashboard.</li>
+<li><strong>Postulante/reinscripción:</strong> <code>/postulantes/create</code> → CI <code>8000001</code> → modal.</li>
+<li><strong>Grupos:</strong> <code>/grupos</code> → “Generar automáticos” → 4 materias × CEIL(habilitados/70).</li>
+<li><strong>Admisión:</strong> <code>/admision/resultados</code> (142 admitidos) → <code>/admision/admitidos</code> → Exportar PDF.</li>
+<li><strong>Reportes + Estadísticas:</strong> <code>/reportes</code> (bajar PDF/Excel) → <code>/estadisticas</code> (3 gráficos).</li>
+</ol>
+<hr />
+<h2>6. SEGURIDAD Y AUTENTICACIÓN</h2>
+<h3>6.1 Login (CU01)</h3>
+<ul>
+<li><strong>Controller real:</strong> <code>app/Http/Controllers/Auth/AuthenticatedSessionController.php</code> → lógica en <code>app/Domain/Seguridad/UseCases/AutenticarUsuarioUseCase.php</code>.</li>
+<li>Credenciales con <code>Auth::attempt()</code>; password <strong>bcrypt</strong> (<code>password =&gt; hashed</code>).</li>
+<li><code>session()-&gt;regenerate()</code> tras login (anti session-fixation).</li>
+<li>Bloqueo: 3 intentos fallidos → <code>bloqueado_hasta = now()+15min</code>.</li>
+</ul>
+<h3>6.2 Roles y permisos</h3>
+<ul>
+<li>Matriz <code>rol_permiso</code> (26 asignaciones, 14 permisos, 6 roles).</li>
+<li>Aplicar permiso en una ruta: <code>-&gt;middleware('permiso:usuarios.ver')</code> (middleware <code>ExigirPermiso</code>).</li>
+<li>En código: <code>Auth::user()-&gt;tienePermiso('roles.crear')</code>.</li>
+<li>El rol <strong>Administrador</strong> se trata como super-rol y no puede inactivarse.</li>
+</ul>
+<h3>6.3 Bitácora inmutable</h3>
+<ul>
+<li><strong>Tabla <code>bitacora</code></strong> read-only por diseño: el modelo <code>Bitacora</code> lanza excepción si se intenta <code>update</code>/<code>delete</code>.</li>
+<li><strong>Cómo se loguea</strong> (código real, <code>BitacoraLogger</code>):
+<pre><code class="language-php">\App\Domain\Bitacora\Services\BitacoraLogger::registrar('LOGIN_OK','Seguridad','Sesión iniciada: '.$user-&gt;email, $user-&gt;id);
+</code></pre>
+Captura solo <code>user_id</code>, <code>ip</code> y <code>user_agent</code>. <strong>Nunca rompe el flujo</strong> (try/catch interno).</li>
+<li><strong>98 registros, 28 acciones distintas</strong> hoy: LOGIN_OK, LOGIN_FAIL, POSTULANTE_HABILITADO, GRUPOS_GENERADOS_AUTO, ASIGNACION_EJECUTADA, etc.</li>
+</ul>
+<hr />
+<h2>7. FUNCIONALIDADES ESPECIALES</h2>
+<h3>7.1 Email (Gmail SMTP)</h3>
+<ul>
+<li><code>.env</code>: <code>MAIL_MAILER=smtp</code>, <code>MAIL_HOST=smtp.gmail.com</code>, <code>MAIL_PORT=587</code>, <code>MAIL_ENCRYPTION=tls</code>, <code>MAIL_FROM_ADDRESS=claurearia@gmail.com</code>.</li>
+<li>Mailables: <code>HabilitacionPostulanteMail</code>, <code>RecuperarPasswordMail</code>. Plantillas: <code>resources/views/emails/</code>.</li>
+<li>Probar: <code>php artisan tinker</code> →
+<pre><code class="language-php">Mail::to('test@test.com')-&gt;send(new \App\Mail\HabilitacionPostulanteMail('Juan','test@test.com','Temp123','Informática'));
+</code></pre>
+</li>
+<li>⚠️ Para la demo: <code>MAIL_MAILER=log</code> escribe el correo en <code>storage/logs/laravel.log</code> (no lo manda) → evita rebotes a Gmail.</li>
+</ul>
+<h3>7.2 Reportes (CU26)</h3>
+<ul>
+<li>Librerías: <code>barryvdh/laravel-dompdf</code> (PDF) + <code>maatwebsite/excel</code> (Excel).</li>
+<li>Plantillas PDF: <code>resources/views/reportes/pdf/generico.blade.php</code> y <code>resources/views/admision/pdf/lista-admitidos.blade.php</code>.</li>
+<li>5 reportes × 3 formatos. Export Excel genérico: <code>app/Exports/GenericExport.php</code>.</li>
+</ul>
+<h3>7.3 Gráficos (CU27)</h3>
+<ul>
+<li><strong>Chart.js 4.4</strong> (CDN) en <code>resources/views/estadisticas/dashboard.blade.php</code>.</li>
+<li>Cambiar tipo/data: editar <code>type: 'pie'|'bar'|'line'</code> y los <code>@json(...)</code> del <code>&lt;script&gt;</code>.</li>
+</ul>
+<h3>7.4 Algoritmo de asignación (CU24)</h3>
+<ul>
+<li><strong>Archivo:</strong> <code>app/Services/AsignacionCarreraService.php</code> → <code>ejecutarAsignacion(Periodo $periodo)</code>.</li>
+<li><strong>Cascada (paso a paso):</strong>
+<ol>
+<li>Traer aprobados del periodo <strong>ordenados por <code>promedio_final</code> DESC</strong>.</li>
+<li>Cargar cupos (<code>cupo_carreras</code>).</li>
+<li>Por cada aprobado (en orden de ranking): tomar sus preferencias (<code>postulacion_carreras</code> por prioridad).</li>
+<li>¿Cupo en la <strong>1ra</strong>? → <code>admitido_primera</code>. Si no, ¿<strong>2da</strong>? → <code>admitido_segunda</code>. Si no → <code>no_admitido_sin_cupo</code>.</li>
+<li>Guardar ranking, carrera asignada, estado y fecha; actualizar <code>postulantes.estado</code>.</li>
+<li>Todo dentro de una <strong>transacción</strong> (atomicidad).</li>
+</ol>
+</li>
+<li><strong>Código resumido:</strong>
+<pre><code class="language-php">$aprobados = ResultadoAdmision::where('periodo_id',$p-&gt;id)
+    -&gt;where('estado_admision','aprobado')-&gt;orderByDesc('promedio_final')-&gt;get();
+$cupos = CupoCarrera::where('periodo_id',$p-&gt;id)-&gt;pluck('cupo_max','carrera_id');
+DB::transaction(function () use (...) {
+    foreach ($aprobados as $r) {
+        $r-&gt;posicion_ranking_general = $pos++;
+        foreach ($preferencias as $pref) {
+            if (($usado[$pref-&gt;carrera_id] ?? 0) &lt; $cupos[$pref-&gt;carrera_id]) {
+                $r-&gt;carrera_asignada_id = $pref-&gt;carrera_id;
+                $r-&gt;estado_admision = $pref-&gt;prioridad==1 ? 'admitido_primera' : 'admitido_segunda';
+                // ...cuenta y rompe
+            }
+        }
+        if (!$asignada) $r-&gt;estado_admision = 'no_admitido_sin_cupo';
+        $r-&gt;save();
+    }
+});
+</code></pre>
+</li>
+<li><strong>Probar:</strong> Admisión → Pre-asignación → “Ejecutar asignación”.</li>
+</ul>
+<hr />
+<h2>8. COMANDOS ÚTILES (CHEAT SHEET)</h2>
+<blockquote>
+<p>Prefijo: <code>&amp; &quot;C:\laragon\bin\php\php-8.3.30-Win32-vs16-x64\php.exe&quot;</code> antes de <code>artisan</code> (PHP no está en PATH).</p>
+</blockquote>
+<h3>8.1 Servidor</h3>
+<table>
+<thead>
+<tr>
+<th>Comando</th>
+<th>Para qué</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>php artisan serve</code></td>
+<td>Levantar servidor en <code>:8000</code></td>
+</tr>
+<tr>
+<td><code>Ctrl+C</code></td>
+<td>Apagar el servidor</td>
+</tr>
+</tbody>
+</table>
+<h3>8.2 Migraciones</h3>
+<table>
+<thead>
+<tr>
+<th>Comando</th>
+<th>Para qué</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>php artisan make:migration X</code></td>
+<td>Crear migración</td>
+</tr>
+<tr>
+<td><code>php artisan migrate</code></td>
+<td>Aplicar pendientes</td>
+</tr>
+<tr>
+<td><code>php artisan migrate:rollback</code></td>
+<td>Revertir la última</td>
+</tr>
+<tr>
+<td><code>php artisan migrate:status</code></td>
+<td>Ver estado</td>
+</tr>
+<tr>
+<td><code>php artisan migrate:fresh --seed</code></td>
+<td>Resetear todo + seeders (BORRA TODO)</td>
+</tr>
+</tbody>
+</table>
+<h3>8.3 Caché</h3>
+<table>
+<thead>
+<tr>
+<th>Comando</th>
+<th>Para qué</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>php artisan view:clear</code></td>
+<td>Limpiar vistas compiladas</td>
+</tr>
+<tr>
+<td><code>php artisan route:clear</code></td>
+<td>Limpiar rutas</td>
+</tr>
+<tr>
+<td><code>php artisan config:clear</code></td>
+<td>Limpiar config</td>
+</tr>
+</tbody>
+</table>
+<h3>8.4 Git</h3>
+<table>
+<thead>
+<tr>
+<th>Comando</th>
+<th>Para qué</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>git status</code></td>
+<td>Ver cambios</td>
+</tr>
+<tr>
+<td><code>git log --oneline -10</code></td>
+<td>Últimos commits</td>
+</tr>
+<tr>
+<td><code>git pull origin main</code></td>
+<td>Bajar cambios</td>
+</tr>
+<tr>
+<td><code>git push origin main</code></td>
+<td>Subir cambios</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2>9. ESCENARIOS DE MODIFICACIÓN EN VIVO</h2>
+<h3>9.1 “Agreguen un campo a Postulantes”</h3>
+<ol>
+<li><code>php artisan make:migration add_campo_to_postulantes_table --table=postulantes</code></li>
+<li>En la migración: <code>$table-&gt;string('campo')-&gt;nullable();</code></li>
+<li><code>php artisan migrate</code></li>
+<li>Agregar <code>'campo'</code> a <code>$fillable</code> en <code>app/Models/Postulante.php</code></li>
+<li>Input en <code>resources/views/postulantes/create.blade.php</code> y <code>edit.blade.php</code></li>
+<li>Validar en <code>PostulanteController::store/update</code> y mostrar la columna en <code>index.blade.php</code></li>
+</ol>
+<h3>9.2 “Cambien el cupo máximo de grupos”</h3>
+<ul>
+<li>Archivo: <code>app/Http/Controllers/GrupoController.php</code> · constante <code>CUPO_DEFAULT</code> (= <strong>70</strong>) y <code>ceil($habilitados / 70)</code> en <code>generarAutomaticos()</code>.</li>
+</ul>
+<h3>9.3 “Agreguen un reporte nuevo”</h3>
+<ol>
+<li>Agregar tipo al array <code>ReporteController::REPORTES</code></li>
+<li>Agregar su <code>case</code> en <code>ReporteController::construir()</code> (encabezados + filas)</li>
+<li>(PDF/Excel/HTML salen del template genérico; la fila aparece sola en <code>reportes/index.blade.php</code>)</li>
+</ol>
+<h3>9.4 “Agreguen una validación”</h3>
+<ul>
+<li>Input → reglas en <code>$request-&gt;validate([...])</code> del Controller.</li>
+<li>Regla de negocio → en el Service o el método del Controller.</li>
+<li>BD → <code>CHECK</code>/<code>unique</code> en una migración.</li>
+</ul>
+<hr />
+<h2>10. PREGUNTAS FRECUENTES (FAQ del jurado)</h2>
+<p><strong>P1 — ¿Por qué Laravel y no Django/Spring?</strong> Es el framework PHP más usado localmente, con ORM (Eloquent), migraciones, auth y Blade listos; aceleró los CRUDs y la seguridad sin reinventar.</p>
+<p><strong>P2 — ¿Por qué PostgreSQL y no MySQL?</strong> Mejor integridad referencial, <code>enum</code>/constraints ricos y la extensión <code>unaccent</code> para búsquedas sin tildes.</p>
+<p><strong>P3 — ¿Qué arquitectura usaron?</strong> MVC de Laravel + capa de dominio (UseCases/Repositories) para seguridad + un Service para el algoritmo de asignación. Clean Architecture pragmática.</p>
+<p><strong>P4 — ¿Cómo manejan la seguridad?</strong> Auth de Laravel (bcrypt, sesiones), roles/permisos por matriz, middleware <code>permiso:</code>, bloqueo por intentos y bitácora.</p>
+<p><strong>P5 — ¿Cómo funciona la bitácora?</strong> <code>BitacoraLogger::registrar()</code> desde cada CU; guarda acción/módulo/descripción/usuario/IP/user-agent. La tabla es inmutable.</p>
+<p><strong>P6 — ¿Qué pasa si se cae el servidor?</strong> Los datos viven en PostgreSQL; al reiniciar (<code>php artisan serve</code>) el estado se recupera íntegro.</p>
+<p><strong>P7 — ¿Por qué Bootstrap y no Tailwind?</strong> Componentes listos y menor curva para el equipo; suficiente para un panel admin. Igual definimos paleta CUP propia con variables CSS.</p>
+<p><strong>P8 — ¿Cómo escalarían a 5000 postulantes?</strong> Índices ya presentes (<code>estado_admision</code>, <code>unique</code>s), listas paginadas, y para más escala: colas (jobs) para emails/reportes y caché de estadísticas.</p>
+<p><strong>P9 — ¿Tests automatizados?</strong> Aún no (PHPUnit); la verificación fue manual + pruebas en <code>tinker</code> con transacciones revertidas. Es lo principal a sumar.</p>
+<p><strong>P10 — ¿Qué falta para producción?</strong> Tests, email transaccional, HTTPS, secrets seguros, y completar los CUs del compañero.</p>
+<p><strong>P11 — ¿Cómo manejaron Git en equipo?</strong> <code>main</code> + rama por feature, merge <code>--no-ff</code>, mensajes descriptivos (ver <code>git log</code>).</p>
+<p><strong>P12 — ¿Por qué soft-delete y no hard-delete?</strong> Integridad e historial: archivar (<code>activo=false</code>) preserva periodos/inscripciones/resultados. Por eso <code>destroy</code> se excluyó de los resources académicos.</p>
+<p><strong>P13 — ¿Cómo evitan inyección SQL?</strong> Eloquent/Query Builder usan <strong>prepared statements</strong>; incluso los <code>whereRaw('unaccent(...) ilike unaccent(?)', [$q])</code> usan bindings.</p>
+<p><strong>P14 — ¿Qué hace <code>unaccent</code>?</strong> Normaliza tildes en Postgres para buscar “Garcia” y encontrar “García”. Se habilita en una migración.</p>
+<p><strong>P15 — ¿Qué patrones usaron?</strong> Service, Use Case, Repository, Mailable, Middleware, Blade Components y auditoría transversal.</p>
+<p><strong>P16 — ¿Cómo funciona el algoritmo de asignación?</strong> Ordena aprobados por promedio DESC y asigna en cascada 1ra → 2da → sin cupo, respetando <code>cupo_carreras</code>, todo en una transacción (ver sección 7.4).</p>
+<p><strong>P17 — ¿Cómo se generan los grupos?</strong> <code>CEIL(habilitados/70)</code> grupos por materia activa, idempotente; valida docente ≤ 4 grupos y aula sin choque de horario.</p>
+<p><strong>P18 — ¿Cómo se hace la habilitación automática?</strong> Al tildar todos los requisitos obligatorios de una inscripción, se crea el usuario y se envía el email con credenciales (idempotente).</p>
+<p><strong>P19 — ¿Pueden mostrar la bitácora?</strong> Sí, en <code>/bitacora</code> (solo lectura). Hoy hay 98 registros / 28 acciones distintas.</p>
+<p><strong>P20 — ¿Cómo aseguran que los datos no se pierdan?</strong> Persisten en PostgreSQL con FKs y <code>unique</code>s; soft-delete para no perder histórico; commits versionados en Git.</p>
+<hr />
+<h2>11. PUNTOS DÉBILES (HONESTOS) Y CÓMO RESPONDER</h2>
+<h3>11.1 No implementado (es de NyxM4x)</h3>
+<ul>
+<li><strong>CU15</strong> Pagos · <strong>CU16</strong> Habilitación post-pago · <strong>CU21</strong> Notas de exámenes · <strong>CU22</strong> Nota final · <strong>CU23</strong> Podio/ranking · <strong>CU28</strong> Consultas IA (OpenAI).</li>
+<li><strong>CU20</strong> (asignar aulas): <strong>ya implementado</strong> de nuestro lado (<code>GrupoController::asignarAula</code>), aunque en el reparto figura del compañero.</li>
+</ul>
+<h3>11.2 Incompleto en tus CUs (etiquetado en la UI)</h3>
+<ul>
+<li><strong>Promedios por materia (CU26/CU27):</strong> son <strong>demo/referenciales</strong> porque las notas por materia dependen del CU21.</li>
+<li><strong>Estadísticas por docente/grupo (CU27):</strong> estructura real (nº grupos, ocupación); promedio/% es referencial hasta tener notas (CU22). El dashboard lo avisa con banner amarillo.</li>
+</ul>
+<h3>11.3 Respuesta modelo</h3>
+<blockquote>
+<p>“Esa funcionalidad la implementa mi compañero NyxM4x; está modelada como CU[XX] en el diagrama de casos de uso y se entrega en el Ciclo 2 final el 09/06. Nuestra integración deja el punto de conexión listo (p. ej., la tabla <code>resultados_admision</code> que consume CU24).”</p>
+</blockquote>
+<hr />
+<h2>12. TOP 10 ARCHIVOS QUE MEMORIZAR</h2>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Archivo</th>
+<th>Para qué</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td><code>.env</code></td>
+<td>Config (BD <code>cup_admision</code>, email, claves)</td>
+</tr>
+<tr>
+<td>2</td>
+<td><code>routes/web.php</code></td>
+<td>Las 136 rutas</td>
+</tr>
+<tr>
+<td>3</td>
+<td><code>app/Domain/Seguridad/UseCases/AutenticarUsuarioUseCase.php</code></td>
+<td>Lógica real de login (CU01)</td>
+</tr>
+<tr>
+<td>4</td>
+<td><code>app/Http/Controllers/PostulanteController.php</code></td>
+<td>Postulantes + reinscripción (CU13)</td>
+</tr>
+<tr>
+<td>5</td>
+<td><code>app/Domain/Bitacora/Services/BitacoraLogger.php</code> + <code>app/Models/Bitacora.php</code></td>
+<td>Auditoría inmutable</td>
+</tr>
+<tr>
+<td>6</td>
+<td><code>resources/views/layouts/base.blade.php</code></td>
+<td>Layout + navbar</td>
+</tr>
+<tr>
+<td>7</td>
+<td><code>database/seeders/DatabaseSeeder.php</code></td>
+<td>Orquestador de datos demo</td>
+</tr>
+<tr>
+<td>8</td>
+<td><code>app/Services/AsignacionCarreraService.php</code></td>
+<td>Algoritmo de asignación (CU24)</td>
+</tr>
+<tr>
+<td>9</td>
+<td><code>config/database.php</code></td>
+<td>Conexión PostgreSQL</td>
+</tr>
+<tr>
+<td>10</td>
+<td><code>app/Mail/HabilitacionPostulanteMail.php</code></td>
+<td>Email de habilitación (CU14)</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p>⚠️ El login NO está en un <code>AuthController.php</code> (no existe): vive en <code>Auth/AuthenticatedSessionController</code> + <code>AutenticarUsuarioUseCase</code>.</p>
+</blockquote>
+<hr />
+<h2>13. ESTRUCTURA COMPLETA DE CARPETAS</h2>
+<pre><code>C:\laragon\www\cup-admision-laravel\
+├── app\
+│   ├── Http\Controllers\        ← 30 controllers (Auth\, Seguridad\, Bitacora\, GestionGlobal\, …)
+│   ├── Http\Middleware\         ← ExigirPermiso.php, ForzarCambioPassword.php
+│   ├── Models\                  ← 20 modelos Eloquent
+│   ├── Mail\                    ← HabilitacionPostulanteMail, RecuperarPasswordMail
+│   ├── Services\                ← AsignacionCarreraService.php
+│   ├── Exports\                 ← GenericExport.php
+│   └── Domain\                  ← Bitacora\, Seguridad\, Usuarios\, GestionGlobal\ (UseCases + Repositories)
+├── database\
+│   ├── migrations\              ← 33 migraciones
+│   ├── seeders\                 ← 6 seeders
+│   └── factories\
+├── resources\views\
+│   ├── layouts\                 ← base.blade.php
+│   ├── components\              ← buscador-cup, modal-confirmar
+│   ├── emails\                  ← habilitacion-postulante, recuperar-password
+│   └── [módulos]\               ← postulantes, documentos, periodos, carreras, materias,
+│                                    horarios, grupos, admision (+pdf), reportes (+pdf),
+│                                    estadisticas, seguridad, gestion-global, docentes,
+│                                    bitacora, dashboards, auth, profile
+├── routes\
+│   └── web.php                  ← 136 rutas
+├── config\                      ← database.php, mail.php, …
+├── public\
+├── .env                         ← credenciales (BD, email)
+└── composer.json                ← laravel/framework ^13.8, dompdf ^3.1, excel ^3.1
+</code></pre>
+<hr />
+<h2>14. AVISOS PENDIENTES / OBSERVACIONES</h2>
+<ol>
+<li><strong>PHP reinstalado (8.3.21)</strong> en <code>C:\laragon\bin\php\php-8.3.30-Win32-vs16-x64\</code>. <code>php</code> no está en PATH → usar la ruta completa. Verificar con <code>php.exe -v</code> antes de la demo.</li>
+<li><strong>La asignación CU24 ya está ejecutada</strong> en la BD (142 <code>admitido_primera</code>, 58 <code>reprobado</code>, 0 <code>aprobado</code>). Por eso <strong><code>/admision/preasignacion</code> muestra 0 aprobados ahora</strong>. Para volver a demostrar la pre-asignación desde cero: <code>php artisan db:seed --class=PromediosDemoSeeder</code>.</li>
+<li><strong><code>grupos = 0</code></strong>: no hay grupos en la BD; generalos en la demo (<code>/grupos</code> → “Generar automáticos”) → con 4 materias activas y ~499 habilitados serán <code>CEIL(499/70)=8 × 4 = 32</code> grupos.</li>
+<li><strong>CU20 (asignar aula)</strong> está implementado en <code>GrupoController::asignarAula</code> aunque el reparto lo asigna al compañero — aclararlo si preguntan.</li>
+<li><strong>Email a Gmail real:</strong> <code>MAIL_FROM_ADDRESS=claurearia@gmail.com</code>. Para la demo conviene <code>MAIL_MAILER=log</code> para no mandar correos reales (rebotan, porque los postulantes demo usan <code>@test.bo</code>).</li>
+<li><strong>Sin tests automatizados</strong> (PHPUnit) todavía; verificación fue manual + tinker.</li>
+<li><strong>Promedios por materia / stats por grupo</strong> son referenciales hasta que el compañero cargue notas (CU21–CU22).</li>
+<li><strong>Todas las migraciones están aplicadas</strong> (33). No se detectaron migraciones pendientes ni rutas rotas en la última revisión.</li>
+</ol>
+<hr />
+<p><em>Generado para la defensa del Sistema CUP — UAGRM · FICCT. Documento de estudio local (NO versionado en Git).</em></p>
+
+</body>
+</html>

@@ -48,6 +48,13 @@
           <label class="form-label">Cupo máximo de admitidos</label>
           <input type="number" name="cupo_max" class="form-control" value="{{ $cupoActual->cupo_max ?? old('cupo_max') }}" required min="1">
         </div>
+        <div class="mb-3">
+          <label class="form-label">Monto de inscripción (Bs.)</label>
+          <input type="number" name="monto_inscripcion" class="form-control"
+                value="{{ $cupoActual->monto_inscripcion ?? old('monto_inscripcion', 50) }}"
+                required min="1" step="0.01">
+          <small class="text-muted">Monto que el postulante pagará para inscribirse a esta carrera</small>
+        </div>
         <div class="mb-4">
           <label class="form-label">Fecha COFI <small class="text-muted">(opcional)</small></label>
           <input type="date" name="fecha_cofi" class="form-control" value="{{ $cupoActual?->fecha_cofi?->format('Y-m-d') ?? '' }}">

@@ -10,11 +10,13 @@ class CupoCarrera extends Model
         'carrera_id',
         'periodo_id',
         'cupo_max',
+        'monto_inscripcion',
         'fecha_cofi',
     ];
 
     protected $casts = [
-        'fecha_cofi' => 'date',
+        'fecha_cofi'         => 'date',
+        'monto_inscripcion'  => 'decimal:2',
     ];
 
     public function carrera()

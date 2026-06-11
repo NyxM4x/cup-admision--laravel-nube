@@ -15,8 +15,6 @@ return Application::configure(basePath: dirname(__DIR__))
             'permiso' => \App\Http\Middleware\ExigirPermiso::class,
             'cambio.password' => \App\Http\Middleware\ForzarCambioPassword::class,
         ]);
-
-        // Forzar cambio de password en primer login (stack web global, tras auth)
         $middleware->web(append: [
             \App\Http\Middleware\ForzarCambioPassword::class,
         ]);

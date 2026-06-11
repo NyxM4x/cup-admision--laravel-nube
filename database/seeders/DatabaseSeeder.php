@@ -23,38 +23,47 @@ class DatabaseSeeder extends Seeder
         // ══════════════════════════════════════
         // 1. USUARIO ADMINISTRADOR
         // ══════════════════════════════════════
-        DB::table('users')->insert([
-            'name'              => 'Administrador CUP',
-            'email'             => 'admin@ficct.uagrm.edu.bo',
-            'password'          => Hash::make('admin1234'),
-            'email_verified_at' => now(),
-            'created_at'        => now(),
-            'updated_at'        => now(),
-        ]);
+        DB::table('users')->updateOrInsert(
+            ['email' => 'admin@ficct.uagrm.edu.bo'],
+            [
+                'name'              => 'Administrador CUP',
+                'password'          => Hash::make('admin1234'),
+                'email_verified_at' => now(),
+                'created_at'        => now(),
+                'updated_at'        => now(),
+            ]
+        );
 
         // ══════════════════════════════════════
         // 2. PERIODOS
         // ══════════════════════════════════════
-        DB::table('periodos')->insert([
-            [
-                'fecha_ini_inscripcion' => '2026-01-05',
-                'fecha_fin_inscripcion' => '2026-02-28',
-                'fecha_ini_curso'       => '2026-03-02',
-                'fecha_fin_curso'       => '2026-06-30',
-                'activo'                => true,
-                'created_at'            => now(),
-                'updated_at'            => now(),
-            ],
-            [
-                'fecha_ini_inscripcion' => '2026-07-06',
-                'fecha_fin_inscripcion' => '2026-08-28',
-                'fecha_ini_curso'       => '2026-09-01',
-                'fecha_fin_curso'       => '2026-11-30',
-                'activo'                => false,
-                'created_at'            => now(),
-                'updated_at'            => now(),
-            ],
-        ]);
+        DB::table('postulacion_carreras')->delete(); // limpiar dependencias primero
+        DB::table('inscripciones')->delete();
+        DB::table('postulantes')->delete();
+        DB::table('cupo_carreras')->delete();
+        DB::table('requisitos')->delete();
+        DB::table('periodos')->delete();             // ahora sí limpiar periodos
+
+    DB::table('periodos')->insert([
+        [
+            'fecha_ini_inscripcion' => '2026-01-05',
+            'fecha_fin_inscripcion' => '2026-02-28',
+            'fecha_ini_curso'       => '2026-03-02',
+            'fecha_fin_curso'       => '2026-06-30',
+            'activo'                => true,
+            'created_at'            => now(),
+            'updated_at'            => now(),
+        ],
+        [
+            'fecha_ini_inscripcion' => '2026-07-06',
+            'fecha_fin_inscripcion' => '2026-08-28',
+            'fecha_ini_curso'       => '2026-09-01',
+            'fecha_fin_curso'       => '2026-11-30',
+            'activo'                => false,
+            'created_at'            => now(),
+            'updated_at'            => now(),
+        ],
+    ]);
 
         $periodo1 = DB::table('periodos')->where('activo', true)->first();
 
@@ -69,23 +78,34 @@ class DatabaseSeeder extends Seeder
         ];
 
         foreach ($carreras as $c) {
-            $id = DB::table('carreras')->insertGetId([
-                'codigo'      => $c['codigo'],
-                'nombre'      => $c['nombre'],
-                'descripcion' => $c['descripcion'],
-                'activo'      => true,
-                'created_at'  => now(),
-                'updated_at'  => now(),
-            ]);
+            $existing = DB::table('carreras')->where('codigo', $c['codigo'])->first();
+            if ($existing) {
+                $id = $existing->id;
+                DB::table('carreras')->where('id', $id)->update([
+                    'nombre'      => $c['nombre'],
+                    'descripcion' => $c['descripcion'],
+                    'updated_at'  => now(),
+                ]);
+            } else {
+                $id = DB::table('carreras')->insertGetId([
+                    'codigo'      => $c['codigo'],
+                    'nombre'      => $c['nombre'],
+                    'descripcion' => $c['descripcion'],
+                    'activo'      => true,
+                    'created_at'  => now(),
+                    'updated_at'  => now(),
+                ]);
+            }
 
-            DB::table('cupo_carreras')->insert([
-                'carrera_id'  => $id,
-                'periodo_id'  => $periodo1->id,
-                'cupo_max'    => 80,
-                'fecha_cofi'  => null,
-                'created_at'  => now(),
-                'updated_at'  => now(),
-            ]);
+            DB::table('cupo_carreras')->updateOrInsert(
+                ['carrera_id' => $id, 'periodo_id' => $periodo1->id],
+                [
+                    'cupo_max'   => 80,
+                    'fecha_cofi' => null,
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]
+            );
         }
 
         // ══════════════════════════════════════
@@ -99,14 +119,16 @@ class DatabaseSeeder extends Seeder
         ];
 
         foreach ($materias as $m) {
-            DB::table('materias')->insert([
-                'sigla'      => $m['sigla'],
-                'nombre'     => $m['nombre'],
-                'dias'       => $m['dias'],
-                'activo'     => true,
-                'created_at' => now(),
-                'updated_at' => now(),
-            ]);
+            DB::table('materias')->updateOrInsert(
+                ['sigla' => $m['sigla']],
+                [
+                    'nombre'     => $m['nombre'],
+                    'dias'       => $m['dias'],
+                    'activo'     => true,
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]
+            );
         }
 
         // ══════════════════════════════════════
@@ -122,17 +144,18 @@ class DatabaseSeeder extends Seeder
         ];
 
         foreach ($requisitos as $r) {
-            DB::table('requisitos')->insert([
-                'periodo_id'       => $periodo1->id,
-                'nombre'           => $r['nombre'],
-                'descripcion'      => $r['descripcion'],
-                'obligatorio'      => $r['obligatorio'],
-                'formato_aceptado' => $r['formato_aceptado'],
-                'tamanio_max_kb'   => $r['tamanio_max_kb'],
-                'activo'           => true,
-                'created_at'       => now(),
-                'updated_at'       => now(),
-            ]);
+            DB::table('requisitos')->updateOrInsert(
+                ['nombre' => $r['nombre'], 'periodo_id' => $periodo1->id],
+                [
+                    'descripcion'      => $r['descripcion'],
+                    'obligatorio'      => $r['obligatorio'],
+                    'formato_aceptado' => $r['formato_aceptado'],
+                    'tamanio_max_kb'   => $r['tamanio_max_kb'],
+                    'activo'           => true,
+                    'created_at'       => now(),
+                    'updated_at'       => now(),
+                ]
+            );
         }
 
         // ══════════════════════════════════════
@@ -148,12 +171,14 @@ class DatabaseSeeder extends Seeder
         ];
 
         foreach ($profesiones as $p) {
-            DB::table('profesiones')->insert([
-                'nombre'           => $p['nombre'],
-                'nivel_jerarquico' => $p['nivel_jerarquico'],
-                'created_at'       => now(),
-                'updated_at'       => now(),
-            ]);
+            DB::table('profesiones')->updateOrInsert(
+                ['nombre' => $p['nombre']],
+                [
+                    'nivel_jerarquico' => $p['nivel_jerarquico'],
+                    'created_at'       => now(),
+                    'updated_at'       => now(),
+                ]
+            );
         }
 
         // ══════════════════════════════════════
@@ -169,31 +194,45 @@ class DatabaseSeeder extends Seeder
         ];
 
         foreach ($docentes as $d) {
-            $personaId = DB::table('personas')->insertGetId([
-                'ci'               => $d['ci'],
-                'nombre'           => $d['nombre'],
-                'fecha_nacimiento' => '1985-06-15',
-                'sexo'             => $d['sexo'],
-                'direccion'        => 'Santa Cruz de la Sierra',
-                'telefono'         => $d['telefono'],
-                'correo'           => $d['correo'],
-                'created_at'       => now(),
-                'updated_at'       => now(),
-            ]);
+            $existingPersona = DB::table('personas')->where('ci', $d['ci'])->first();
+            if ($existingPersona) {
+                $personaId = $existingPersona->id;
+                DB::table('personas')->where('id', $personaId)->update([
+                    'nombre'    => $d['nombre'],
+                    'sexo'      => $d['sexo'],
+                    'telefono'  => $d['telefono'],
+                    'correo'    => $d['correo'],
+                    'updated_at' => now(),
+                ]);
+            } else {
+                $personaId = DB::table('personas')->insertGetId([
+                    'ci'               => $d['ci'],
+                    'nombre'           => $d['nombre'],
+                    'fecha_nacimiento' => '1985-06-15',
+                    'sexo'             => $d['sexo'],
+                    'direccion'        => 'Santa Cruz de la Sierra',
+                    'telefono'         => $d['telefono'],
+                    'correo'           => $d['correo'],
+                    'created_at'       => now(),
+                    'updated_at'       => now(),
+                ]);
+            }
 
             $profesionId = DB::table('profesiones')
                 ->where('nombre', $d['profesion'])->first()->id;
 
-            DB::table('docentes')->insert([
-                'persona_id'         => $personaId,
-                'profesion_id'       => $profesionId,
-                'anios_experiencia'  => $d['experiencia'],
-                'certif_docente'     => null,
-                'certif_profesional' => null,
-                'activo'             => true,
-                'created_at'         => now(),
-                'updated_at'         => now(),
-            ]);
+            DB::table('docentes')->updateOrInsert(
+                ['persona_id' => $personaId],
+                [
+                    'profesion_id'       => $profesionId,
+                    'anios_experiencia'  => $d['experiencia'],
+                    'certif_docente'     => null,
+                    'certif_profesional' => null,
+                    'activo'             => true,
+                    'created_at'         => now(),
+                    'updated_at'         => now(),
+                ]
+            );
         }
 
         // ══════════════════════════════════════
@@ -213,58 +252,89 @@ class DatabaseSeeder extends Seeder
         ];
 
         foreach ($postulantes as $p) {
-            // Crear Persona
-            $personaId = DB::table('personas')->insertGetId([
-                'ci'               => $p['ci'],
-                'nombre'           => $p['nombre'],
-                'fecha_nacimiento' => '2006-03-10',
-                'sexo'             => $p['sexo'],
-                'direccion'        => 'Santa Cruz de la Sierra',
-                'telefono'         => $p['telefono'],
-                'correo'           => $p['correo'],
-                'created_at'       => now(),
-                'updated_at'       => now(),
-            ]);
+            // Crear o recuperar Persona
+            $existingPersona = DB::table('personas')->where('ci', $p['ci'])->first();
+            if ($existingPersona) {
+                $personaId = $existingPersona->id;
+                DB::table('personas')->where('id', $personaId)->update([
+                    'nombre'     => $p['nombre'],
+                    'sexo'       => $p['sexo'],
+                    'telefono'   => $p['telefono'],
+                    'correo'     => $p['correo'],
+                    'updated_at' => now(),
+                ]);
+            } else {
+                $personaId = DB::table('personas')->insertGetId([
+                    'ci'               => $p['ci'],
+                    'nombre'           => $p['nombre'],
+                    'fecha_nacimiento' => '2006-03-10',
+                    'sexo'             => $p['sexo'],
+                    'direccion'        => 'Santa Cruz de la Sierra',
+                    'telefono'         => $p['telefono'],
+                    'correo'           => $p['correo'],
+                    'created_at'       => now(),
+                    'updated_at'       => now(),
+                ]);
+            }
 
-            // Crear Postulante
-            $postulanteId = DB::table('postulantes')->insertGetId([
-                'persona_id'  => $personaId,
-                'colegio'     => $p['colegio'],
-                'estado'      => 'inscrito',
-                'created_at'  => now(),
-                'updated_at'  => now(),
-            ]);
+            // Crear o recuperar Postulante
+            $existingPostulante = DB::table('postulantes')->where('persona_id', $personaId)->first();
+            if ($existingPostulante) {
+                $postulanteId = $existingPostulante->id;
+                DB::table('postulantes')->where('id', $postulanteId)->update([
+                    'colegio'    => $p['colegio'],
+                    'updated_at' => now(),
+                ]);
+            } else {
+                $postulanteId = DB::table('postulantes')->insertGetId([
+                    'persona_id'  => $personaId,
+                    'colegio'     => $p['colegio'],
+                    'estado'      => 'inscrito',
+                    'created_at'  => now(),
+                    'updated_at'  => now(),
+                ]);
+            }
 
-            // Crear Inscripción
-            $inscripcionId = DB::table('inscripciones')->insertGetId([
-                'postulante_id'     => $postulanteId,
-                'periodo_id'        => $periodo1->id,
-                'fecha_inscripcion' => now()->toDateString(),
-                'estado'            => 'activa',
-                'created_at'        => now(),
-                'updated_at'        => now(),
-            ]);
+            // Crear o recuperar Inscripción
+            $existingInscripcion = DB::table('inscripciones')
+                ->where('postulante_id', $postulanteId)
+                ->where('periodo_id', $periodo1->id)
+                ->first();
+            if ($existingInscripcion) {
+                $inscripcionId = $existingInscripcion->id;
+            } else {
+                $inscripcionId = DB::table('inscripciones')->insertGetId([
+                    'postulante_id'     => $postulanteId,
+                    'periodo_id'        => $periodo1->id,
+                    'fecha_inscripcion' => now()->toDateString(),
+                    'estado'            => 'activa',
+                    'created_at'        => now(),
+                    'updated_at'        => now(),
+                ]);
+            }
 
             // Carrera 1 (obligatoria)
             $carrera1Id = DB::table('carreras')->where('codigo', $p['carrera1'])->first()->id;
-            DB::table('postulacion_carreras')->insert([
-                'inscripcion_id' => $inscripcionId,
-                'carrera_id'     => $carrera1Id,
-                'prioridad'      => 1,
-                'created_at'     => now(),
-                'updated_at'     => now(),
-            ]);
+            DB::table('postulacion_carreras')->updateOrInsert(
+                ['inscripcion_id' => $inscripcionId, 'carrera_id' => $carrera1Id],
+                [
+                    'prioridad'  => 1,
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]
+            );
 
             // Carrera 2 (opcional)
             if ($p['carrera2']) {
                 $carrera2Id = DB::table('carreras')->where('codigo', $p['carrera2'])->first()->id;
-                DB::table('postulacion_carreras')->insert([
-                    'inscripcion_id' => $inscripcionId,
-                    'carrera_id'     => $carrera2Id,
-                    'prioridad'      => 2,
-                    'created_at'     => now(),
-                    'updated_at'     => now(),
-                ]);
+                DB::table('postulacion_carreras')->updateOrInsert(
+                    ['inscripcion_id' => $inscripcionId, 'carrera_id' => $carrera2Id],
+                    [
+                        'prioridad'  => 2,
+                        'created_at' => now(),
+                        'updated_at' => now(),
+                    ]
+                );
             }
         }
 

@@ -88,7 +88,7 @@
             <a href="{{ route('usuarios.edit', $u->id) }}" class="btn-action btn-action-edit" title="Editar">
               <i class="bi bi-pencil"></i>
             </a>
-            @if($u->bloqueado_hasta && now()->lessThan($u->bloqueado_hasta))
+	    @if($u->bloqueado_hasta && now()->lessThan($u->bloqueado_hasta))
               <form id="form-desbloquear-usuario-{{ $u->id }}"
                     action="{{ route('usuarios.reactivar', $u->id) }}" method="POST" style="display:inline">
                 @csrf
@@ -155,3 +155,4 @@
 </div>
 
 @endsection
+
