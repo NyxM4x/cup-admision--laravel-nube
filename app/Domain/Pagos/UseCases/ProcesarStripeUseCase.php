@@ -10,28 +10,31 @@ use Stripe\PaymentIntent;
 
 class ProcesarStripeUseCase
 {
+    public function __construct(
+        private ObtenerMontoInscripcionUseCase $montoUseCase
+    ) {}
+
     public function crearIntento(Inscripcion $inscripcion): array
     {
-        if (!class_exists(\Stripe\Stripe::class)) {
-            throw new \RuntimeException("Stripe SDK not installed. Run: composer require stripe/stripe-php");
-        }
-
         Stripe::setApiKey(config('pagos.stripe.secret'));
 
+        // Obtener monto dinámico de la carrera
+        $monto = $this->montoUseCase->ejecutar($inscripcion);
+        $montoCentavos = (int) ($monto * 100);
+
         $intent = PaymentIntent::create([
-            'amount'   => 5000, // Bs. 50.00 en centavos
-            'currency' => 'usd', // Stripe sandbox no soporta BOB
+            'amount'   => $montoCentavos,
+            'currency' => 'usd',
             'metadata' => [
                 'inscripcion_id' => $inscripcion->id,
                 'postulante_ci'  => $inscripcion->postulante->persona->ci,
             ],
         ]);
 
-        // Registrar pago pendiente
         $pago = Pago::updateOrCreate(
             ['inscripcion_id' => $inscripcion->id, 'estado' => 'pendiente'],
             [
-                'monto'         => 50.00,
+                'monto'         => $monto,
                 'metodo'        => 'Stripe',
                 'referencia_qr' => $intent->id,
                 'estado'        => 'pendiente',
@@ -43,12 +46,13 @@ class ProcesarStripeUseCase
         BitacoraLogger::registrar(
             'STRIPE_INTENTO_CREADO',
             'Pagos',
-            "PaymentIntent creado: {$intent->id} — Inscripción #{$inscripcion->id}"
+            "PaymentIntent creado: {$intent->id} — Inscripcion #{$inscripcion->id}"
         );
 
         return [
             'client_secret'  => $intent->client_secret,
             'payment_intent' => $intent->id,
+            'monto'          => $monto,
             'pago'           => $pago,
         ];
     }
@@ -62,10 +66,7 @@ class ProcesarStripeUseCase
         if ($intent->status === 'succeeded') {
             $pago = Pago::where('referencia_qr', $paymentIntentId)->first();
             if ($pago) {
-                $pago->update([
-                    'estado'     => 'pendiente', // Admin confirma
-                    'metodo'     => 'Stripe',
-                ]);
+                $pago->update(['estado' => 'pendiente', 'metodo' => 'Stripe']);
             }
 
             BitacoraLogger::registrar(

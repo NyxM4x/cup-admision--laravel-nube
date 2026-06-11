@@ -10,6 +10,10 @@ use Illuminate\Support\Facades\Log;
 
 class ProcesarPayPalUseCase
 {
+    public function __construct(
+        private ObtenerMontoInscripcionUseCase $montoUseCase
+    ) {}
+
     private function getAccessToken(): ?string
     {
         try {
@@ -37,11 +41,15 @@ class ProcesarPayPalUseCase
     {
         try {
             $token = $this->getAccessToken();
-            
+
             if (!$token) {
                 Log::error('PayPal: No se pudo obtener token');
                 return ['order_id' => null, 'approve_url' => null, 'error' => 'No se pudo conectar con PayPal'];
             }
+
+            // Obtener monto dinámico de la carrera
+            $monto = $this->montoUseCase->ejecutar($inscripcion);
+            $montoStr = number_format($monto, 2, '.', '');
 
             $response = Http::withToken($token)
                 ->post(config('pagos.paypal.base_url') . '/v2/checkout/orders', [
@@ -49,7 +57,7 @@ class ProcesarPayPalUseCase
                     'purchase_units' => [[
                         'amount' => [
                             'currency_code' => 'USD',
-                            'value'         => '5.00',
+                            'value'         => $montoStr,
                         ],
                         'description' => 'Inscripcion CUP FICCT UAGRM',
                     ]],
@@ -61,6 +69,7 @@ class ProcesarPayPalUseCase
                         'shipping_preference' => 'NO_SHIPPING',
                     ],
                 ]);
+
             if ($response->failed()) {
                 Log::error('PayPal Create Order Error:', ['response' => $response->json()]);
                 return ['order_id' => null, 'approve_url' => null, 'error' => 'Error al crear orden PayPal'];
@@ -71,7 +80,7 @@ class ProcesarPayPalUseCase
             Pago::updateOrCreate(
                 ['inscripcion_id' => $inscripcion->id, 'estado' => 'pendiente'],
                 [
-                    'monto'         => 5.00,
+                    'monto'         => $monto,
                     'metodo'        => 'PayPal',
                     'referencia_qr' => $order['id'] ?? null,
                     'estado'        => 'pendiente',
@@ -83,11 +92,6 @@ class ProcesarPayPalUseCase
             $approveUrl = collect($order['links'] ?? [])
                 ->firstWhere('rel', 'approve')['href'] ?? null;
 
-            Log::info('PayPal Order Response:', ['links' => $order['links'] ?? 'no links', 'status' => $order['status'] ?? 'no status']);
-            Log::info('PayPal Order Created:', ['order_id' => $order['id'] ?? 'unknown']);
-            Log::info('PayPal Approve URL:', ['url' => $approveUrl ?? 'null']);
-            Log::info('PayPal Return URL:', ['url' => route('pagos.paypal.retorno')]);
-
             BitacoraLogger::registrar(
                 'PAYPAL_ORDEN_CREADA',
                 'Pagos',
@@ -98,7 +102,7 @@ class ProcesarPayPalUseCase
                 'order_id'    => $order['id'] ?? null,
                 'approve_url' => $approveUrl,
             ];
-            
+
         } catch (\Exception $e) {
             Log::error('PayPal Exception:', ['message' => $e->getMessage(), 'line' => $e->getLine()]);
             return ['order_id' => null, 'approve_url' => null, 'error' => $e->getMessage()];
@@ -109,7 +113,7 @@ class ProcesarPayPalUseCase
     {
         try {
             $token = $this->getAccessToken();
-            
+
             if (!$token) {
                 Log::error('PayPal: No se pudo obtener token para capturar');
                 return false;
@@ -124,7 +128,7 @@ class ProcesarPayPalUseCase
                 $pago = Pago::where('referencia_qr', $orderId)->first();
                 if ($pago) {
                     $pago->update(['estado' => 'aprobado']);
-                    $inscripcion->update(['estado' => 'pagado']);
+                    $inscripcion->update(['estado' => 'pago_aprobado']);
                 }
 
                 BitacoraLogger::registrar(
@@ -138,7 +142,7 @@ class ProcesarPayPalUseCase
 
             Log::error('PayPal Capture Error:', ['response' => $result]);
             return false;
-            
+
         } catch (\Exception $e) {
             Log::error('PayPal Capture Exception:', ['message' => $e->getMessage()]);
             return false;

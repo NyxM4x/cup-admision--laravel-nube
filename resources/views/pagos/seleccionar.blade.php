@@ -27,7 +27,7 @@
             </tr>
             <tr>
                 <td class="text-muted">Monto:</td>
-                <td><strong class="text-success fs-5">Bs. 50.00</strong></td>
+                <td><strong class="text-success fs-5">Bs. {{ number_format($monto, 2) }}</strong></td>
             </tr>
         </table>
     </div>

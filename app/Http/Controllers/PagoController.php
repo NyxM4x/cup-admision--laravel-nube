@@ -9,6 +9,7 @@ use App\Models\Inscripcion;
 use App\Models\Pago;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use App\Domain\Pagos\UseCases\ObtenerMontoInscripcionUseCase;
 
 class PagoController extends Controller
 {
@@ -26,7 +27,9 @@ class PagoController extends Controller
             return redirect()->route('pagos.estado', $inscripcion)
                 ->with('info', 'Tu pago ya fue aprobado.');
         }
-        return view('pagos.seleccionar', compact('inscripcion'));
+
+        $monto = app(ObtenerMontoInscripcionUseCase::class)->ejecutar($inscripcion);
+        return view('pagos.seleccionar', compact('inscripcion', 'monto'));
     }
 
     public function stripeForm(Inscripcion $inscripcion)

@@ -68,10 +68,11 @@ class CarreraController extends Controller
 
             // Crear el cupo asociado al periodo activo
             CupoCarrera::create([
-                'carrera_id' => $carrera->id,
-                'periodo_id' => $periodoActivo->id,
-                'cupo_max'   => $request->cupo_max,
-                'fecha_cofi' => $request->fecha_cofi ?? null,
+                'carrera_id'        => $carrera->id,
+                'periodo_id'        => $periodoActivo->id,
+                'cupo_max'          => $request->cupo_max,
+                'monto_inscripcion' => $request->monto_inscripcion ?? 50.00,
+                'fecha_cofi'        => $request->fecha_cofi ?? null,
             ]);
 
             BitacoraLogger::registrar(
@@ -130,7 +131,11 @@ class CarreraController extends Controller
             if ($periodoActivo) {
                 CupoCarrera::updateOrCreate(
                     ['carrera_id' => $carrera->id, 'periodo_id' => $periodoActivo->id],
-                    ['cupo_max'   => $request->cupo_max, 'fecha_cofi' => $request->fecha_cofi ?? null]
+                    [
+                        'cupo_max'          => $request->cupo_max,
+                        'monto_inscripcion' => $request->monto_inscripcion ?? 50.00,
+                        'fecha_cofi'        => $request->fecha_cofi ?? null,
+                    ]
                 );
             }
 
