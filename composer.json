@@ -86,7 +86,8 @@
     "sort-packages": true,
     "platform-check": false,
     "platform": {
-        "ext-gd": "8.0.0"
+        "ext-gd": "8.0.0",
+        "ext-zip": "8.0.0"
     },
     "allow-plugins": {
         "pestphp/pest-plugin": true,
