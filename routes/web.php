@@ -6,6 +6,7 @@ use App\Http\Controllers\PagoController;
 use App\Http\Controllers\DashboardPostulanteController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\DashboardAdminController;
+use App\Http\Controllers\GrupoPostulanteController;
 // ══════════════════════════════════════════════
 // PÁGINA DE INICIO
 // ══════════════════════════════════════════════
@@ -75,6 +76,9 @@ use App\Http\Controllers\DocumentoPostulanteController;
 
 Route::middleware('auth')->group(function () {
 
+    Route::get('mis-grupos/{inscripcion}',              [GrupoPostulanteController::class, 'seleccionar'])->name('grupos.seleccionar');
+    Route::post('mis-grupos/{inscripcion}/confirmar',   [GrupoPostulanteController::class, 'confirmar'])->name('grupos.confirmar');
+    Route::delete('mis-grupos/{inscripcion}/{grupo}',   [GrupoPostulanteController::class, 'abandonar'])->name('grupos.abandonar');
     // CU07 — Periodos
     Route::resource('periodos', PeriodoController::class)->except(['destroy']);
     Route::post('periodos/{periodo}/archivar',  [PeriodoController::class, 'archivar'])->name('periodos.archivar');

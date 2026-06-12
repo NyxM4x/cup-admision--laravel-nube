@@ -8,7 +8,12 @@
 <body class="bg-light">
 <div class="container mt-4" style="max-width:600px">
     <h2>Estado de tu Pago</h2>
-    <a href="{{ route('dashboard') }}" class="btn btn-secondary mb-3">← Volver</a>
+    <form action="{{ route('logout') }}" method="POST" class="mt-2">
+        @csrf
+        <button type="submit" class="btn btn-outline-secondary w-100">
+            <i class="bi bi-box-arrow-right me-1"></i> Cerrar sesión
+        </button>
+    </form>
 
     @if(session('success'))
         <div class="alert alert-success">{{ session('success') }}</div>

@@ -47,9 +47,10 @@ class ProcesarPayPalUseCase
                 return ['order_id' => null, 'approve_url' => null, 'error' => 'No se pudo conectar con PayPal'];
             }
 
-            // Obtener monto dinámico de la carrera
             $monto = $this->montoUseCase->ejecutar($inscripcion);
             $montoStr = number_format($monto, 2, '.', '');
+
+            Log::info('PayPal Monto calculado:', ['monto' => $monto, 'montoStr' => $montoStr]);
 
             $response = Http::withToken($token)
                 ->post(config('pagos.paypal.base_url') . '/v2/checkout/orders', [
@@ -91,6 +92,10 @@ class ProcesarPayPalUseCase
 
             $approveUrl = collect($order['links'] ?? [])
                 ->firstWhere('rel', 'approve')['href'] ?? null;
+
+            Log::info('PayPal Order Created:', ['order_id' => $order['id'] ?? 'unknown']);
+            Log::info('PayPal Approve URL:', ['url' => $approveUrl ?? 'null']);
+            Log::info('PayPal Return URL:', ['url' => route('pagos.paypal.retorno')]);
 
             BitacoraLogger::registrar(
                 'PAYPAL_ORDEN_CREADA',

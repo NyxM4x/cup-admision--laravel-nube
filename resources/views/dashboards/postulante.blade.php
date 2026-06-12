@@ -82,30 +82,7 @@
         <strong>¡Pago confirmado! Estás habilitado para el Curso Preuniversitario.</strong>
     </div>
 
-    <div class="row g-3 mb-4">
-        <div class="col-md-4">
-            <div class="kpi-card kpi-primary h-100">
-                <div class="kpi-icon"><i class="bi bi-people"></i></div>
-                <div class="kpi-value" style="font-size:1.25rem;">Pendiente de asignación</div>
-                <div class="kpi-label">Mi Grupo</div>
-            </div>
-        </div>
-        <div class="col-md-4">
-            <div class="kpi-card kpi-warning h-100">
-                <div class="kpi-icon"><i class="bi bi-clock"></i></div>
-                <div class="kpi-value" style="font-size:1.25rem;">Pendiente</div>
-                <div class="kpi-label">Mi Horario</div>
-            </div>
-        </div>
-        <div class="col-md-4">
-            <div class="kpi-card kpi-accent h-100">
-                <div class="kpi-icon"><i class="bi bi-graph-up"></i></div>
-                <div class="kpi-value" style="font-size:1.25rem;">No disponibles aún</div>
-                <div class="kpi-label">Mis Notas</div>
-            </div>
-        </div>
-    </div>
-
+    {{-- Datos de inscripción --}}
     <div class="panel-cup mb-4">
         <div class="panel-cup-header">
             <strong><i class="bi bi-clipboard-check me-1"></i> Mi Inscripción</strong>
@@ -146,15 +123,92 @@
         </div>
     </div>
 
+{{-- Grupos asignados --}}
+@if($grupos->count() > 0)
+    <div class="panel-cup mb-4">
+        <div class="panel-cup-header">
+            <strong><i class="bi bi-people me-1"></i> Mis Grupos y Horarios</strong>
+        </div>
+        <div class="panel-cup-body p-0">
+            <table class="table table-bordered mb-0">
+                <thead class="table-dark">
+                    <tr>
+                        <th>Materia</th>
+                        <th>Grupo</th>
+                        <th>Turno</th>
+                        <th>Días</th>
+                        <th>Horario</th>
+                        <th>Aula</th>
+                        <th>Docente</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach($grupos as $grupo)
+                    <tr>
+                        <td><strong>{{ $grupo->materia->nombre ?? '—' }}</strong></td>
+                        <td><span class="badge bg-primary">{{ $grupo->codigo }}</span></td>
+                        <td>
+                            @if($grupo->horario)
+                                <span class="badge bg-info text-dark">{{ $grupo->horario->turno }}</span>
+                            @else
+                                <span class="text-muted">—</span>
+                            @endif
+                        </td>
+                        <td>{{ $grupo->horario->dias ?? '—' }}</td>
+                        <td>
+                            @if($grupo->horario)
+                                {{ \Carbon\Carbon::parse($grupo->horario->hora_inicio)->format('H:i') }}
+                                —
+                                {{ \Carbon\Carbon::parse($grupo->horario->hora_fin)->format('H:i') }}
+                            @else
+                                <span class="text-muted">—</span>
+                            @endif
+                        </td>
+                        <td>{{ $grupo->aula ? $grupo->aula->edificio . ' - ' . $grupo->aula->codigo : '—' }}</td>
+                        <td>{{ $grupo->docente->persona->nombre ?? 'Por asignar' }}</td>
+                    </tr>
+                    @endforeach
+                </tbody>
+            </table>
+            {{-- 👇 AGREGAR BOTÓN MODIFICAR DESPUÉS DE LA TABLA --}}
+            <div class="p-3 text-end border-top">
+                <a href="{{ route('grupos.seleccionar', $inscripcion) }}" class="btn btn-outline-primary">
+                    <i class="bi bi-pencil me-1"></i> Modificar mis grupos
+                </a>
+            </div>
+        </div>
+    </div>
+@else
+    <div class="panel-cup mb-4">
+        <div class="panel-cup-header">
+            <strong><i class="bi bi-people me-1"></i> Mis Grupos y Horarios</strong>
+        </div>
+        <div class="panel-cup-body text-center py-4">
+            <i class="bi bi-hourglass-split fs-1 text-muted"></i>
+            <p class="text-muted mt-2 mb-0">
+                Tu grupo aún no ha sido asignado.<br>
+                <small>La administración asignará los grupos próximamente.</small>
+            </p>
+            {{-- 👇 AGREGAR BOTÓN DE SELECCIONAR AQUÍ --}}
+            <div class="mt-3">
+                <a href="{{ route('grupos.seleccionar', $inscripcion) }}" class="btn btn-primary">
+                    <i class="bi bi-people me-1"></i> Seleccionar mis grupos y horarios
+                </a>
+            </div>
+        </div>
+    </div>
+@endif
+
+    {{-- Notas --}}
     <div class="panel-cup">
         <div class="panel-cup-header">
-            <strong><i class="bi bi-info-circle me-1"></i> Próximos pasos</strong>
+            <strong><i class="bi bi-graph-up me-1"></i> Mis Notas</strong>
         </div>
-        <div class="panel-cup-body">
-            <p class="text-muted mb-0" style="font-size:0.92rem;line-height:1.6;">
-                Tu inscripción está confirmada. Pronto la administración asignará
-                los grupos, horarios y docentes. Recibirás una notificación cuando
-                tu grupo esté disponible.
+        <div class="panel-cup-body text-center py-4">
+            <i class="bi bi-journal-text fs-1 text-muted"></i>
+            <p class="text-muted mt-2 mb-0">
+                Las notas estarán disponibles después de los exámenes.<br>
+                <small>El docente registrará tus calificaciones en el sistema.</small>
             </p>
         </div>
     </div>

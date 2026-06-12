@@ -87,8 +87,15 @@ class PagoController extends Controller
 
     public function paypalCancelarGeneral(Request $request)
     {
-        return redirect()->route('login')
-            ->with('error', 'Pago PayPal cancelado por el usuario.');
+        $inscripcionId = session('pago_inscripcion_id');
+        if ($inscripcionId) {
+            $inscripcion = \App\Models\Inscripcion::find($inscripcionId);
+            if ($inscripcion) {
+                return redirect()->route('pagos.estado', $inscripcion)
+                    ->with('info', 'Tu solicitud de pago fue procesada. El administrador la revisará en breve.');
+            }
+        }
+        return redirect()->route('dashboard');
     }
 
     public function paypalRetorno(Request $request)
