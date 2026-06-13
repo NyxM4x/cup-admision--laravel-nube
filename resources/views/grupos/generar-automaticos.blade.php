@@ -43,21 +43,21 @@
         </div>
         <div class="col-md-3">
           <div class="kpi-card kpi-accent">
-            <div class="kpi-value">{{ $gruposPorMateria }}</div>
-            <div class="kpi-label">Grupos / materia</div>
+            <div class="kpi-value">{{ $gruposPorTurno }}</div>
+            <div class="kpi-label">Grupos / turno</div>
           </div>
         </div>
         <div class="col-md-3">
           <div class="kpi-card kpi-info">
-            <div class="kpi-value">{{ $gruposPorMateria * $materiasCount }}</div>
+            <div class="kpi-value">{{ $gruposPorTurno * $turnosDisponibles }}</div>
             <div class="kpi-label">Total a generar</div>
           </div>
         </div>
       </div>
 
       <p class="text-muted">
-        Se crearán <strong>CEIL({{ $habilitados }} / {{ \App\Http\Controllers\GrupoController::CUPO_DEFAULT }}) = {{ $gruposPorMateria }}</strong>
-        grupos por cada una de las <strong>{{ $materiasCount }}</strong> materias activas, con cupo máximo de
+        Se crearán <strong>CEIL({{ $habilitados }} / {{ \App\Http\Controllers\GrupoController::CUPO_DEFAULT }}) = {{ $gruposPorTurno }}</strong>
+        grupos por cada una de las <strong>{{ $turnosDisponibles }}</strong> turnos activos, con cupo máximo de
         {{ \App\Http\Controllers\GrupoController::CUPO_DEFAULT }} alumnos.
         @if($existentes > 0)
           <br><i class="bi bi-info-circle me-1"></i>Ya existen <strong>{{ $existentes }}</strong> grupos en este periodo; la generación solo completa los faltantes (no duplica).
@@ -70,7 +70,7 @@
                 onclick="cupConfirmar({
                   titulo: 'Generar grupos automáticamente',
                   mensaje: '¿Generar los grupos para el periodo activo #{{ $periodo->id }}?',
-                  subtexto: 'Se crearán {{ $gruposPorMateria }} grupos por materia ({{ $materiasCount }} materias). No se duplican los existentes.',
+                  subtexto: 'Se crearán {{ $gruposPorTurno}} grupos por materia ({{ $turnosDisponibles }} materias). No se duplican los existentes.',
                   textoBoton: 'Sí, generar',
                   tipo: 'warning',
                   formSelector: '#form-generar-grupos'

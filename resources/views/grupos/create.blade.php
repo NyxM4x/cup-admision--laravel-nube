@@ -66,7 +66,8 @@
         <div class="col-md-3">
           <label class="form-label fw-semibold">Cupo máximo <span class="text-danger">*</span></label>
           <input type="number" name="cupo_max" value="{{ old('cupo_max', 70) }}"
-                 class="form-control @error('cupo_max') is-invalid @enderror" min="1" max="300">
+                 class="form-control @error('cupo_max') is-invalid @enderror" min="1" max="70">
+          <small class="text-muted">Máximo permitido: 70 alumnos por grupo</small>       
           @error('cupo_max')<div class="invalid-feedback">{{ $message }}</div>@enderror
         </div>
         <div class="col-md-4">
