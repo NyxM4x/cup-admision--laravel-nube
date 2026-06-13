@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 
 namespace App\Http\Controllers;
 
@@ -85,11 +85,11 @@ class MateriaController extends Controller
     public function update(Request $request, Materia $materia)
     {
         $request->validate([
-            'sigla'        => 'required|string|max:20|unique:materias,sigla,' . $materia->id,
-            'nombre'       => 'required|string|max:100',
-            'peso_examen1' => 'required|numeric|min:1|max:98',
-            'peso_examen2' => 'required|numeric|min:1|max:98',
-            'peso_examen3' => 'required|numeric|min:1|max:98',
+            'sigla'           => 'required|string|max:20|unique:materias,sigla,' . $materia->id,
+            'nombre'          => 'required|string|max:100|unique:materias,nombre,' . $materia->id,
+            'peso_examen1'    => 'required|numeric|min:1|max:98',
+            'peso_examen2'    => 'required|numeric|min:1|max:98',
+            'peso_examen3'    => 'required|numeric|min:1|max:98',
         ]);
 
         $suma = $request->peso_examen1 + $request->peso_examen2 + $request->peso_examen3;
@@ -117,7 +117,7 @@ class MateriaController extends Controller
             ->with('success', 'Materia actualizada correctamente.');
     }
 
-    // Archivar materia (inactivación lógica — NO se elimina físicamente)
+    // Archivar materia (inactivaciÃ³n lÃ³gica â€” NO se elimina fÃ­sicamente)
     public function archivar(Materia $materia)
     {
         $materia->update(['activo' => false]);
