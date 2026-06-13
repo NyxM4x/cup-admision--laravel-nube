@@ -80,7 +80,7 @@ class GrupoController extends Controller
             'periodo_id' => 'required|exists:periodos,id',
             'horario_id' => 'required|exists:horarios,id',
             'aula_id'    => 'nullable|exists:aulas,id',
-            'cupo_max'   => 'required|integer|min:1|max:300',
+            'cupo_max'   => 'required|integer|min:1|max:70',
         ]);
 
         // Validar los 4 bloques de materias
@@ -159,7 +159,7 @@ class GrupoController extends Controller
             'codigo'     => 'required|string|max:20',
             'horario_id' => 'required|exists:horarios,id',
             'aula_id'    => 'nullable|exists:aulas,id',
-            'cupo_max'   => 'required|integer|min:1|max:300',
+            'cupo_max'   => 'required|integer|min:1|max:70',
         ]);
 
         $request->validate([
