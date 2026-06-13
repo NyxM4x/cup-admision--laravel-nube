@@ -33,15 +33,20 @@ class DashboardPostulanteController extends Controller
             'pagado',
         ]);
 
-        // Cargar grupos solo si tiene acceso completo
-        $grupos = collect();
+        $grupo = null;
         if ($accesoCompleto && $inscripcion) {
-            $grupos = Grupo::whereHas('postulantes', function ($q) use ($inscripcion) {
+            $grupo = Grupo::whereHas('postulantes', function ($q) use ($inscripcion) {
                     $q->where('postulante_id', $inscripcion->postulante_id);
                 })
-                ->with(['materia', 'horario', 'aula', 'docente.persona'])
+                ->with([
+                    'horario',
+                    'aula',
+                    'grupoMaterias.materia',
+                    'grupoMaterias.docente.persona',
+                    'grupoMaterias.aula',
+                ])
                 ->where('activo', true)
-                ->get();
+                ->first();
         }
 
         return view('dashboards.postulante', compact(
@@ -49,7 +54,7 @@ class DashboardPostulanteController extends Controller
             'estadoPago',
             'estadoInscripcion',
             'accesoCompleto',
-            'grupos'
+            'grupo'
         ));
     }
 }

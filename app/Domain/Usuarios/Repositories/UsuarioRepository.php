@@ -8,13 +8,24 @@ use Illuminate\Database\Eloquent\Builder;
 class UsuarioRepository
 {
     /**
-     * Construye la query de listado con búsqueda y filtro por estado.
-     *
-     * @param  string  $estado  activos | inactivos | todos
+     * Roles que SÍ aparecen en la gestión de usuarios.
+     * Los postulantes se gestionan desde el módulo de Postulantes, no aquí.
      */
+    private const ROLES_VISIBLES = [
+        'Administrador',
+        'Coordinador CUP',
+        'Docente',
+        'Auditor',
+    ];
+
     public function listar(?string $q = null, string $estado = 'activos'): Builder
     {
-        $query = User::query()->with('rol');
+        $query = User::query()
+            ->with('rol')
+            // Excluir postulantes de esta vista
+            ->whereHas('rol', fn ($r) =>
+                $r->whereIn('nombre', self::ROLES_VISIBLES)
+            );
 
         if ($q) {
             $query->where(function ($sub) use ($q) {
@@ -29,7 +40,6 @@ class UsuarioRepository
         } elseif ($estado === 'inactivos') {
             $query->where('activo', false);
         }
-        // 'todos' no filtra
 
         return $query->orderBy('name');
     }
@@ -45,21 +55,16 @@ class UsuarioRepository
         if ($exceptoId) {
             $query->where('id', '!=', $exceptoId);
         }
-
         return $query->exists();
     }
 
     public function ciExiste(?string $ci, ?int $exceptoId = null): bool
     {
-        if (! $ci) {
-            return false;
-        }
-
+        if (! $ci) return false;
         $query = User::where('ci', $ci);
         if ($exceptoId) {
             $query->where('id', '!=', $exceptoId);
         }
-
         return $query->exists();
     }
 

@@ -4,7 +4,6 @@ namespace App\Http\Controllers;
 
 use App\Domain\Bitacora\Services\BitacoraLogger;
 use App\Models\Grupo;
-use App\Models\Horario;
 use App\Models\Inscripcion;
 use App\Models\Periodo;
 use Illuminate\Http\Request;
@@ -13,105 +12,88 @@ use Illuminate\Support\Facades\DB;
 
 class GrupoPostulanteController extends Controller
 {
-    // Vista de selección de grupos agrupados por turno
     public function seleccionar(Inscripcion $inscripcion)
     {
         $periodoActivo = Periodo::where('activo', true)->first();
 
         if (!$periodoActivo) {
-            return back()->with('error', 'No hay periodo activo.');
+            return redirect()->route('dashboard')->with('error', 'No hay periodo activo.');
         }
 
-        // Verificar que el postulante tiene pago aprobado
         if (!in_array($inscripcion->estado, ['habilitado', 'pago_aprobado', 'pagado'])) {
             return redirect()->route('dashboard')
-                ->with('error', 'Debes completar el pago antes de seleccionar grupo.');
+                ->with('error', 'Debes completar el pago antes de seleccionar tu turno.');
         }
 
-        // Ver si ya tiene grupos asignados
-        $gruposAsignados = Grupo::whereHas('postulantes', function ($q) use ($inscripcion) {
+        $with = ['horario', 'aula', 'grupoMaterias.materia', 'grupoMaterias.docente.persona', 'grupoMaterias.aula'];
+
+        // ¿Ya tiene turno asignado?
+        $grupoAsignado = Grupo::whereHas('postulantes', function ($q) use ($inscripcion) {
                 $q->where('postulante_id', $inscripcion->postulante_id);
             })
-            ->with(['materia', 'horario', 'aula', 'docente.persona'])
+            ->with($with)
             ->where('periodo_id', $periodoActivo->id)
-            ->get();
+            ->first();
 
-        // Grupos disponibles agrupados por turno
-        $gruposPorTurno = Grupo::with(['materia', 'horario', 'aula', 'docente.persona'])
+        if ($grupoAsignado) {
+            return view('grupos.seleccionar', [
+                'inscripcion'       => $inscripcion,
+                'grupoAsignado'     => $grupoAsignado,
+                'gruposDisponibles' => collect(),
+            ]);
+        }
+
+        // Turnos disponibles (con sus 4 materias completas y cupo libre)
+        $gruposDisponibles = Grupo::with($with)
             ->where('periodo_id', $periodoActivo->id)
             ->where('activo', true)
-            ->whereHas('horario')
             ->whereRaw('inscritos_actuales < cupo_max')
             ->get()
-            ->groupBy(fn($g) => $g->horario->turno ?? 'Sin turno');
+            ->filter(fn ($g) => $g->grupoMaterias->count() >= 4)
+            ->groupBy(fn ($g) => $g->horario->turno ?? 'Sin turno');
 
-        return view('grupos.seleccionar', compact(
-            'inscripcion',
-            'gruposPorTurno',
-            'gruposAsignados',
-            'periodoActivo'
-        ));
+        return view('grupos.seleccionar', [
+            'inscripcion'       => $inscripcion,
+            'grupoAsignado'     => null,
+            'gruposDisponibles' => $gruposDisponibles,
+        ]);
     }
 
-    // Postulante confirma selección de grupo
     public function confirmar(Request $request, Inscripcion $inscripcion)
     {
-        $request->validate([
-            'grupo_id' => 'required|exists:grupos,id',
-        ]);
+        $request->validate(['grupo_id' => 'required|exists:grupos,id']);
+
+        // Ya tiene turno? no permitir cambiar
+        $yaTiene = Grupo::whereHas('postulantes', function ($q) use ($inscripcion) {
+                $q->where('postulante_id', $inscripcion->postulante_id);
+            })->exists();
+
+        if ($yaTiene) {
+            return redirect()->route('grupos.seleccionar', $inscripcion)
+                ->with('error', 'Ya tienes un turno asignado. No es posible cambiarlo.');
+        }
 
         $grupo = Grupo::findOrFail($request->grupo_id);
 
-        // Verificar cupo
         if ($grupo->inscritos_actuales >= $grupo->cupo_max) {
-            return back()->with('error', 'El grupo seleccionado ya no tiene cupos disponibles.');
-        }
-
-        // Verificar que no esté ya en un grupo de la misma materia
-        $yaEnMateria = Grupo::whereHas('postulantes', function ($q) use ($inscripcion) {
-                $q->where('postulante_id', $inscripcion->postulante_id);
-            })
-            ->where('materia_id', $grupo->materia_id)
-            ->exists();
-
-        if ($yaEnMateria) {
-            return back()->with('error', 'Ya tienes un grupo asignado para esa materia.');
+            return back()->with('error', 'Ese turno ya no tiene cupos disponibles.');
         }
 
         DB::transaction(function () use ($grupo, $inscripcion) {
-            // Asignar postulante al grupo
             $grupo->postulantes()->attach($inscripcion->postulante_id, [
                 'fecha_asignacion' => now(),
             ]);
-
-            // Incrementar inscritos
             $grupo->increment('inscritos_actuales');
 
             BitacoraLogger::registrar(
-                'POSTULANTE_GRUPO_SELECCIONADO',
+                'POSTULANTE_TURNO_SELECCIONADO',
                 'Grupos',
-                "Postulante #{$inscripcion->postulante_id} seleccionó grupo {$grupo->codigo} ({$grupo->materia->nombre})",
+                "Postulante #{$inscripcion->postulante_id} seleccionó turno {$grupo->codigo} ({$grupo->horario?->turno})",
                 Auth::id()
             );
         });
 
         return redirect()->route('grupos.seleccionar', $inscripcion)
-            ->with('success', "✅ Te inscribiste correctamente en el grupo {$grupo->codigo} — {$grupo->materia->nombre}.");
-    }
-
-    // Postulante abandona un grupo
-    public function abandonar(Request $request, Inscripcion $inscripcion, Grupo $grupo)
-    {
-        $grupo->postulantes()->detach($inscripcion->postulante_id);
-        $grupo->decrement('inscritos_actuales');
-
-        BitacoraLogger::registrar(
-            'POSTULANTE_GRUPO_ABANDONADO',
-            'Grupos',
-            "Postulante #{$inscripcion->postulante_id} abandonó grupo {$grupo->codigo}",
-            Auth::id()
-        );
-
-        return back()->with('success', "Saliste del grupo {$grupo->codigo}.");
+            ->with('success', "✅ Te inscribiste correctamente en el turno {$grupo->horario->turno} ({$grupo->codigo}).");
     }
 }

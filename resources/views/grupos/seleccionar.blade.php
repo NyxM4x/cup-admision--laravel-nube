@@ -1,10 +1,10 @@
 @extends('layouts.base')
-@section('titulo', 'Seleccionar Grupo — CUP')
+@section('titulo', 'Mi Horario — CUP')
 @section('contenido')
 
 <div class="page-header mb-4">
-    <h1><i class="bi bi-people me-2"></i>Seleccionar Grupo</h1>
-    <p class="page-subtitle">Elige tu grupo para cada materia del Curso Preuniversitario</p>
+    <h1><i class="bi bi-calendar3 me-2"></i>Mi Horario</h1>
+    <p class="page-subtitle">Curso Preuniversitario — FICCT UAGRM</p>
 </div>
 
 @if(session('success'))
@@ -14,143 +14,117 @@
     <div class="alert alert-danger">{{ session('error') }}</div>
 @endif
 
-{{-- Grupos ya asignados --}}
-@if($gruposAsignados->count() > 0)
+@if($grupoAsignado)
+    {{-- VISTA SOLO LECTURA --}}
+    <div class="alert alert-success d-flex align-items-center gap-2 mb-4">
+        <i class="bi bi-check-circle-fill fs-5"></i>
+        <strong>Ya tienes un turno asignado: {{ $grupoAsignado->horario->turno ?? '—' }} ({{ $grupoAsignado->codigo }})</strong>
+    </div>
+
     <div class="panel-cup mb-4">
-        <div class="panel-cup-header" style="background:#198754;color:#fff;">
-            <strong><i class="bi bi-check-circle me-1"></i> Mis grupos confirmados</strong>
+        <div class="panel-cup-header" style="background: {{ ($grupoAsignado->horario->turno ?? '') === 'Mañana' ? '#ffc107' : '#fd7e14' }}; color:#000;">
+            <strong><i class="bi bi-{{ ($grupoAsignado->horario->turno ?? '') === 'Mañana' ? 'sun' : 'sunset' }} me-1"></i>
+                Turno {{ $grupoAsignado->horario->turno ?? '—' }} — {{ $grupoAsignado->horario->dias ?? '' }}
+            </strong>
         </div>
         <div class="panel-cup-body p-0">
             <table class="table table-bordered mb-0">
                 <thead class="table-dark">
                     <tr>
-                        <th>Materia</th>
-                        <th>Grupo</th>
-                        <th>Turno</th>
-                        <th>Días</th>
-                        <th>Horario</th>
-                        <th>Aula</th>
-                        <th>Docente</th>
-                        <th></th>
+                        <th>#</th><th>Materia</th><th>Horario</th><th>Aula</th><th>Docente</th>
                     </tr>
                 </thead>
                 <tbody>
-                    @foreach($gruposAsignados as $ga)
+                    @foreach($grupoAsignado->grupoMaterias->sortBy('orden') as $gm)
                     <tr>
-                        <td><strong>{{ $ga->materia->nombre }}</strong></td>
-                        <td><span class="badge bg-success">{{ $ga->codigo }}</span></td>
-                        <td><span class="badge bg-info text-dark">{{ $ga->horario->turno ?? '—' }}</span></td>
-                        <td>{{ $ga->horario->dias ?? '—' }}</td>
+                        <td>{{ $gm->orden }}</td>
+                        <td><strong>{{ $gm->materia->nombre ?? '—' }}</strong></td>
+                        <td>{{ $gm->rango }}</td>
                         <td>
-                            @if($ga->horario)
-                                {{ substr($ga->horario->hora_inicio, 0, 5) }} — {{ substr($ga->horario->hora_fin, 0, 5) }}
-                            @else —
-                            @endif
+                            @php $aulaEf = $gm->aula ?? $grupoAsignado->aula; @endphp
+                            {{ $aulaEf ? $aulaEf->edificio . ' ' . $aulaEf->codigo : '—' }}
                         </td>
-                        <td>{{ $ga->aula ? $ga->aula->edificio . ' ' . $ga->aula->codigo : '—' }}</td>
-                        <td>{{ $ga->docente->persona->nombre ?? 'Por asignar' }}</td>
-                        <td>
-                            <form action="{{ route('grupos.abandonar', [$inscripcion, $ga]) }}" method="POST"
-                                  onsubmit="return confirm('¿Salir de este grupo?')">
-                                @csrf
-                                @method('DELETE')
-                                <button class="btn btn-sm btn-outline-danger">Salir</button>
-                            </form>
-                        </td>
+                        <td>{{ $gm->docente->persona->nombre ?? 'Por asignar' }}</td>
                     </tr>
                     @endforeach
                 </tbody>
             </table>
         </div>
     </div>
-@endif
 
-{{-- Grupos disponibles por turno --}}
-@if($gruposPorTurno->isEmpty())
-    <div class="alert alert-warning">
-        <i class="bi bi-exclamation-triangle me-1"></i>
-        Aún no hay grupos disponibles para este periodo. La administración los habilitará próximamente.
-    </div>
-@else
-    @foreach(['Mañana', 'Tarde', 'Noche'] as $turno)
-        @if($gruposPorTurno->has($turno))
-        <div class="panel-cup mb-4">
-            <div class="panel-cup-header d-flex align-items-center gap-2"
-                 style="background: {{ $turno === 'Mañana' ? '#ffc107' : ($turno === 'Tarde' ? '#fd7e14' : '#343a40') }};
-                        color: {{ $turno === 'Noche' ? '#fff' : '#000' }}">
-                <i class="bi bi-{{ $turno === 'Mañana' ? 'sun' : ($turno === 'Tarde' ? 'sunset' : 'moon') }} me-1"></i>
-                <strong>Turno {{ $turno }}</strong>
-            </div>
-            <div class="panel-cup-body p-0">
-                <table class="table table-bordered mb-0">
-                    <thead class="table-dark">
-                        <tr>
-                            <th>Materia</th>
-                            <th>Código</th>
-                            <th>Días</th>
-                            <th>Horario</th>
-                            <th>Aula</th>
-                            <th>Docente</th>
-                            <th>Cupos</th>
-                            <th>Acción</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach($gruposPorTurno[$turno] as $grupo)
-                        @php
-                            $yaInscrito = $gruposAsignados->contains('id', $grupo->id);
-                            $yaEnMateria = $gruposAsignados->contains('materia_id', $grupo->materia_id);
-                            $sinCupo = $grupo->inscritos_actuales >= $grupo->cupo_max;
-                        @endphp
-                        <tr class="{{ $yaInscrito ? 'table-success' : ($sinCupo ? 'table-secondary' : '') }}">
-                            <td><strong>{{ $grupo->materia->nombre }}</strong>
-                                <small class="text-muted">({{ $grupo->materia->sigla }})</small>
-                            </td>
-                            <td><span class="badge bg-primary">{{ $grupo->codigo }}</span></td>
-                            <td>{{ $grupo->horario->dias ?? '—' }}</td>
-                            <td>
-                                {{ substr($grupo->horario->hora_inicio ?? '', 0, 5) }}
-                                — {{ substr($grupo->horario->hora_fin ?? '', 0, 5) }}
-                            </td>
-                            <td>{{ $grupo->aula ? $grupo->aula->edificio . ' ' . $grupo->aula->codigo : '—' }}</td>
-                            <td>{{ $grupo->docente->persona->nombre ?? 'Por asignar' }}</td>
-                            <td>
-                                <span class="badge {{ $sinCupo ? 'bg-danger' : 'bg-success' }}">
-                                    {{ $grupo->inscritos_actuales }}/{{ $grupo->cupo_max }}
-                                </span>
-                            </td>
-                            <td>
-                                @if($yaInscrito)
-                                    <span class="badge bg-success">✅ Inscrito</span>
-                                @elseif($yaEnMateria)
-                                    <span class="badge bg-secondary">Ya tienes grupo</span>
-                                @elseif($sinCupo)
-                                    <span class="badge bg-danger">Sin cupo</span>
-                                @else
-                                    <form action="{{ route('grupos.confirmar', $inscripcion) }}" method="POST">
-                                        @csrf
-                                        <input type="hidden" name="grupo_id" value="{{ $grupo->id }}">
-                                        <button type="submit" class="btn btn-sm btn-primary"
-                                                onclick="return confirm('¿Confirmar inscripción en {{ $grupo->codigo }}?')">
-                                            Elegir
-                                        </button>
-                                    </form>
-                                @endif
-                            </td>
-                        </tr>
-                        @endforeach
-                    </tbody>
-                </table>
-            </div>
-        </div>
-        @endif
-    @endforeach
-@endif
-
-<div class="mt-3">
     <a href="{{ route('dashboard') }}" class="btn btn-secondary">
-        <i class="bi bi-arrow-left me-1"></i> Volver al Dashboard
+        <i class="bi bi-arrow-left me-1"></i> Volver a mi panel
     </a>
-</div>
+
+@else
+    {{-- SELECCIÓN DE TURNO --}}
+    @if($gruposDisponibles->isEmpty())
+        <div class="alert alert-warning">
+            <i class="bi bi-exclamation-triangle me-1"></i>
+            Aún no hay turnos disponibles. La administración los habilitará próximamente.
+        </div>
+        <a href="{{ route('dashboard') }}" class="btn btn-secondary">
+            <i class="bi bi-arrow-left me-1"></i> Volver a mi panel
+        </a>
+    @else
+        @foreach(['Mañana', 'Tarde', 'Noche'] as $turno)
+            @if($gruposDisponibles->has($turno))
+                @foreach($gruposDisponibles[$turno] as $grupo)
+                <div class="panel-cup mb-4">
+                    <div class="panel-cup-header d-flex justify-content-between align-items-center"
+                         style="background: {{ $turno === 'Mañana' ? '#ffc107' : ($turno === 'Tarde' ? '#fd7e14' : '#343a40') }};
+                                color: {{ $turno === 'Noche' ? '#fff' : '#000' }}">
+                        <strong><i class="bi bi-{{ $turno === 'Mañana' ? 'sun' : ($turno === 'Tarde' ? 'sunset' : 'moon') }} me-1"></i>
+                            Turno {{ $turno }} — {{ $grupo->codigo }} ({{ $grupo->horario->dias ?? '' }})
+                        </strong>
+                        <span class="badge {{ $grupo->tieneCupo() ? 'bg-success' : 'bg-danger' }}">
+                            Cupos: {{ $grupo->inscritos_actuales }}/{{ $grupo->cupo_max }}
+                        </span>
+                    </div>
+                    <div class="panel-cup-body p-0">
+                        <table class="table table-bordered mb-0">
+                            <thead class="table-dark">
+                                <tr><th>#</th><th>Materia</th><th>Horario</th><th>Aula</th><th>Docente</th></tr>
+                            </thead>
+                            <tbody>
+                                @foreach($grupo->grupoMaterias->sortBy('orden') as $gm)
+                                <tr>
+                                    <td>{{ $gm->orden }}</td>
+                                    <td>{{ $gm->materia->nombre ?? '—' }}</td>
+                                    <td>{{ $gm->rango }}</td>
+                                    <td>
+                                        @php $aulaEf = $gm->aula ?? $grupo->aula; @endphp
+                                        {{ $aulaEf ? $aulaEf->edificio . ' ' . $aulaEf->codigo : '—' }}
+                                    </td>
+                                    <td>{{ $gm->docente->persona->nombre ?? 'Por asignar' }}</td>
+                                </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="p-3">
+                        @if($grupo->tieneCupo())
+                        <form action="{{ route('grupos.confirmar', $inscripcion) }}" method="POST">
+                            @csrf
+                            <input type="hidden" name="grupo_id" value="{{ $grupo->id }}">
+                            <button class="btn btn-primary"
+                                    onclick="return confirm('¿Confirmar este turno? No podrás cambiarlo después.')">
+                                Elegir este turno
+                            </button>
+                        </form>
+                        @else
+                        <span class="badge bg-danger">Sin cupo</span>
+                        @endif
+                    </div>
+                </div>
+                @endforeach
+            @endif
+        @endforeach
+
+        <a href="{{ route('dashboard') }}" class="btn btn-secondary">
+            <i class="bi bi-arrow-left me-1"></i> Volver a mi panel
+        </a>
+    @endif
+@endif
 
 @endsection

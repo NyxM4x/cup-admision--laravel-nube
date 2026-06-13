@@ -1,7 +1,5 @@
 @extends('layouts.base')
-
 @section('titulo', 'Editar Docente')
-
 @section('contenido')
 
 <div class="page-header d-flex justify-content-between align-items-start mb-4">
@@ -80,7 +78,7 @@
       </h5>
 
       <div class="row g-3 mb-3">
-        <div class="col-md-8">
+        <div class="col-md-5">
           <label class="form-label">Profesión</label>
           <select name="profesion_id" class="form-select">
             <option value="">— Sin especificar —</option>
@@ -91,9 +89,31 @@
             @endforeach
           </select>
         </div>
+
+        {{-- ▼ CAMPO NUEVO: Materia que dicta --}}
         <div class="col-md-4">
+          <label class="form-label fw-semibold">
+            Materia que dicta <span class="text-danger">*</span>
+          </label>
+          <select name="materia" class="form-select @error('materia') is-invalid @enderror" required>
+            <option value="">— Seleccionar materia —</option>
+            @foreach($materias as $mat)
+              <option value="{{ $mat->sigla }}"
+                      {{ old('materia', $docente->materia) === $mat->sigla ? 'selected' : '' }}>
+                {{ $mat->sigla }} — {{ $mat->nombre }}
+              </option>
+            @endforeach
+          </select>
+          @error('materia')
+            <div class="invalid-feedback">{{ $message }}</div>
+          @enderror
+          <small class="text-muted">Determina qué grupos puede recibir este docente</small>
+        </div>
+
+        <div class="col-md-3">
           <label class="form-label">Años de experiencia <span class="text-danger">*</span></label>
-          <input type="number" name="anios_experiencia" class="form-control" value="{{ old('anios_experiencia', $docente->anios_experiencia) }}" min="0" max="50" required>
+          <input type="number" name="anios_experiencia" class="form-control"
+                 value="{{ old('anios_experiencia', $docente->anios_experiencia) }}" min="0" max="50" required>
         </div>
       </div>
 
@@ -102,28 +122,27 @@
           <label class="form-label">Certificado docente</label>
           @if($docente->certif_docente)
             <p class="text-muted small mb-1">
-              <i class="bi bi-file-earmark-pdf me-1"></i>Archivo actual:
-              <a href="{{ Storage::url($docente->certif_docente) }}" target="_blank">Ver</a>
+              <i class="bi bi-file-earmark-pdf me-1"></i>
+              <a href="{{ Storage::url($docente->certif_docente) }}" target="_blank">Ver archivo actual</a>
             </p>
           @endif
           <input type="file" name="certif_docente" class="form-control" accept=".pdf,.jpg,.jpeg,.png">
-          <small class="text-muted">Subir solo si desea reemplazar el actual</small>
+          <small class="text-muted">Dejar vacío para mantener el actual</small>
         </div>
         <div class="col-md-6">
           <label class="form-label">Certificado profesional</label>
           @if($docente->certif_profesional)
             <p class="text-muted small mb-1">
-              <i class="bi bi-file-earmark-pdf me-1"></i>Archivo actual:
-              <a href="{{ Storage::url($docente->certif_profesional) }}" target="_blank">Ver</a>
+              <i class="bi bi-file-earmark-pdf me-1"></i>
+              <a href="{{ Storage::url($docente->certif_profesional) }}" target="_blank">Ver archivo actual</a>
             </p>
           @endif
           <input type="file" name="certif_profesional" class="form-control" accept=".pdf,.jpg,.jpeg,.png">
-          <small class="text-muted">Subir solo si desea reemplazar el actual</small>
+          <small class="text-muted">Dejar vacío para mantener el actual</small>
         </div>
       </div>
 
       <hr>
-
       <div class="d-flex gap-2 justify-content-end">
         <a href="{{ route('docentes.index') }}" class="btn btn-outline-secondary">Cancelar</a>
         <button type="submit" class="btn btn-cup-primary">

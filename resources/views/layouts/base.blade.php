@@ -357,6 +357,14 @@
 
         <div class="collapse navbar-collapse" id="navbarMain">
 
+            @php
+                $rolActual = strtolower(Auth::user()->rol?->nombre ?? '');
+                $esPostulante = $rolActual === 'postulante';
+                $esAdminOCoord = in_array($rolActual, ['administrador', 'coordinador cup']);
+                $esAuditor = $rolActual === 'auditor';
+                $esDocente = $rolActual === 'docente';
+            @endphp
+
             {{-- Links principales --}}
             <ul class="navbar-nav me-auto mb-2 mb-lg-0">
 
@@ -366,6 +374,11 @@
                         <i class="bi bi-speedometer2 me-1"></i>Dashboard
                     </a>
                 </li>
+
+                {{-- ═══════════════════════════════════════════════ --}}
+                {{-- MENÚ SOLO PARA ADMINISTRADOR Y COORDINADOR CUP --}}
+                {{-- ═══════════════════════════════════════════════ --}}
+                @if($esAdminOCoord)
 
                 {{-- Gestión Académica --}}
                 <li class="nav-item dropdown">
@@ -424,6 +437,8 @@
                             <i class="bi bi-diagram-3 me-2 text-success"></i>Resultados de asignación</a></li>
                         <li><a class="dropdown-item {{ request()->routeIs('admision.admitidos') ? 'fw-bold' : '' }}" href="{{ route('admision.admitidos') }}">
                             <i class="bi bi-award me-2 text-warning"></i>Lista final admitidos</a></li>
+                        <li><a class="dropdown-item {{ request()->routeIs('notas.*') ? 'fw-bold' : '' }}" href="{{ route('notas.index') }}">
+                            <i class="bi bi-pencil-square me-2 text-primary"></i>Registrar notas (CU21/22)</a></li>
                         <li><hr class="dropdown-divider"></li>
                         <li><a class="dropdown-item {{ request()->routeIs('reportes.*') ? 'fw-bold' : '' }}" href="{{ route('reportes.index') }}">
                             <i class="bi bi-file-earmark-text me-2 text-danger"></i>Reportes (PDF/Excel/HTML)</a></li>
@@ -478,7 +493,59 @@
                     </a>
                 </li>
 
-                {{-- Seguridad --}}
+                @endif {{-- fin @if($esAdminOCoord) --}}
+
+                {{-- ═══════════════════════════════════════════ --}}
+                {{-- MENÚ AUDITOR: solo lectura                  --}}
+                {{-- ═══════════════════════════════════════════ --}}
+                @if($esAuditor)
+                <li class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle
+                        {{ request()->routeIs('admision.*','reportes.*','estadisticas.*') ? 'active' : '' }}"
+                       href="#" data-bs-toggle="dropdown">
+                        <i class="bi bi-graph-up me-1"></i>Reportes
+                    </a>
+                    <ul class="dropdown-menu">
+                        <li><span class="nav-section">Solo lectura</span></li>
+                        <li><a class="dropdown-item" href="{{ route('admision.preasignacion') }}">
+                            <i class="bi bi-list-ol me-2 text-primary"></i>Pre-asignación (ranking)</a></li>
+                        <li><a class="dropdown-item" href="{{ route('admision.resultados') }}">
+                            <i class="bi bi-diagram-3 me-2 text-success"></i>Resultados</a></li>
+                        <li><a class="dropdown-item" href="{{ route('admision.admitidos') }}">
+                            <i class="bi bi-award me-2 text-warning"></i>Lista admitidos</a></li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li><a class="dropdown-item" href="{{ route('reportes.index') }}">
+                            <i class="bi bi-file-earmark-text me-2 text-danger"></i>Reportes</a></li>
+                        <li><a class="dropdown-item" href="{{ route('estadisticas.dashboard') }}">
+                            <i class="bi bi-bar-chart me-2 text-info"></i>Estadísticas</a></li>
+                    </ul>
+                </li>
+                @endif {{-- fin @if($esAuditor) --}}
+
+                {{-- ═══════════════════════════════════════════ --}}
+                {{-- MENÚ POSTULANTE: solo su información        --}}
+                {{-- ═══════════════════════════════════════════ --}}
+                @if($esPostulante)
+                <li class="nav-item">
+                    <a class="nav-link {{ request()->routeIs('mis-grupos.*') ? 'active' : '' }}"
+                       href="{{ route('dashboard') }}">
+                        <i class="bi bi-calendar-check me-1"></i>Mi Grupo y Horario
+                    </a>
+                </li>
+                @endif {{-- fin @if($esPostulante) --}}
+
+                {{-- ═══════════════════════════════════════════ --}}
+                {{-- MENÚ DOCENTE: solo su información           --}}
+                {{-- ═══════════════════════════════════════════ --}}
+                @if($esDocente)
+                <li class="nav-item">
+                    <a class="nav-link" href="{{ route('dashboard') }}">
+                        <i class="bi bi-calendar2-week me-1"></i>Mis Grupos
+                    </a>
+                </li>
+                @endif {{-- fin @if($esDocente) --}}
+
+                {{-- Seguridad (solo Admin) --}}
                 @auth
                 @if(Auth::user()->tienePermiso('usuarios.ver') || Auth::user()->tienePermiso('roles.ver') || Auth::user()->tienePermiso('permisos.gestionar'))
                 <li class="nav-item dropdown">

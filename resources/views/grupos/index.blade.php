@@ -7,7 +7,7 @@
 <div class="page-header d-flex justify-content-between align-items-start mb-4">
   <div>
     <h1><i class="bi bi-people-fill me-2"></i>Grupos</h1>
-    <p class="page-subtitle">Grupos por materia y periodo (máx. {{ \App\Http\Controllers\GrupoController::CUPO_DEFAULT }} alumnos por grupo)</p>
+    <p class="page-subtitle">Grupos por turno (Mañana/Tarde) — máx. {{ \App\Http\Controllers\GrupoController::CUPO_DEFAULT }} alumnos por grupo</p>
   </div>
   <div class="d-flex gap-2">
     <a href="{{ route('grupos.generar-automaticos.form') }}" class="btn btn-outline-primary">
@@ -19,11 +19,24 @@
   </div>
 </div>
 
+{{-- Mensajes flash --}}
+@if(session('success'))
+  <div class="alert alert-success d-flex align-items-center gap-2">
+    <i class="bi bi-check-circle-fill"></i> {{ session('success') }}
+  </div>
+@endif
+@if(session('error'))
+  <div class="alert alert-danger d-flex align-items-center gap-2">
+    <i class="bi bi-exclamation-triangle-fill"></i> {{ session('error') }}
+  </div>
+@endif
+
+{{-- Filtros --}}
 <form method="GET" class="row g-2 align-items-center mb-3">
   <div class="col-md-6">
     <div class="input-group">
       <span class="input-group-text bg-white"><i class="bi bi-search text-muted"></i></span>
-      <input type="text" name="q" value="{{ $q ?? '' }}" class="form-control" placeholder="Buscar por código o materia...">
+      <input type="text" name="q" value="{{ $q ?? '' }}" class="form-control" placeholder="Buscar por código o turno...">
     </div>
   </div>
   <div class="col-md-4">
@@ -41,6 +54,7 @@
   </div>
 </form>
 
+{{-- ══ TABLA DE GRUPOS ══ --}}
 <div class="panel-cup">
   <div class="panel-cup-body p-0">
     <div class="table-responsive">
@@ -48,10 +62,9 @@
       <thead>
         <tr>
           <th>Código</th>
-          <th>Materia</th>
-          <th>Horario</th>
-          <th>Aula</th>
-          <th>Docente</th>
+          <th>Turno</th>
+          <th>Aula por defecto</th>
+          <th>Materias configuradas</th>
           <th class="text-center">Cupo</th>
           <th>Estado</th>
           <th class="text-end">Acciones</th>
@@ -60,16 +73,21 @@
       <tbody>
         @forelse($grupos as $grupo)
           <tr class="{{ $grupo->activo ? '' : 'table-secondary' }}">
+
+            {{-- Código --}}
             <td><span class="badge-cup badge-modulo">{{ $grupo->codigo }}</span></td>
-            <td><strong>{{ $grupo->materia->sigla ?? '—' }}</strong><br><small class="text-muted">{{ $grupo->materia->nombre ?? '' }}</small></td>
+
+            {{-- Turno (antes era Materia + Docente) --}}
             <td>
               @if($grupo->horario)
-                <small>{{ $grupo->horario->codigo }} · {{ $grupo->horario->rango }}</small>
+                <strong>{{ $grupo->horario->turno }}</strong>
+                <small class="d-block text-muted">{{ $grupo->horario->rango }}</small>
               @else
                 <small class="text-muted">Sin horario</small>
               @endif
             </td>
-            {{-- CU20: asignar aula inline --}}
+
+            {{-- CU20: Aula por defecto (asignación rápida inline) --}}
             <td style="min-width:180px">
               <form action="{{ route('grupos.asignar-aula', $grupo) }}" method="POST" class="d-flex gap-1">
                 @csrf
@@ -81,29 +99,57 @@
                     </option>
                   @endforeach
                 </select>
-                <button type="submit" class="btn btn-sm btn-outline-primary" title="Asignar aula"><i class="bi bi-check2"></i></button>
+                <button type="submit" class="btn btn-sm btn-outline-primary" title="Asignar aula por defecto">
+                  <i class="bi bi-check2"></i>
+                </button>
               </form>
             </td>
-            {{-- CU18: asignar docente inline (máx 4 por periodo) --}}
-            <td style="min-width:200px">
-              <form action="{{ route('grupos.asignar-docente', $grupo) }}" method="POST" class="d-flex gap-1">
-                @csrf
-                <select name="docente_id" class="form-select form-select-sm" required>
-                  <option value="">— Docente —</option>
-                  @foreach($docentes as $doc)
-                    <option value="{{ $doc->id }}" {{ $grupo->docente_id === $doc->id ? 'selected' : '' }}>
-                      {{ $doc->persona->nombre ?? ('Docente #'.$doc->id) }}
-                    </option>
+
+            {{-- Materias configuradas (resumen de los bloques del grupo) --}}
+            <td style="min-width:220px">
+              @if($grupo->grupoMaterias->isEmpty())
+                <span class="badge bg-warning text-dark">
+                  <i class="bi bi-exclamation-triangle me-1"></i>Sin materias
+                </span>
+                <a href="{{ route('grupos.edit', $grupo) }}" class="btn btn-xs btn-link ms-1 p-0">
+                  Configurar
+                </a>
+              @else
+                <div class="d-flex flex-column gap-1">
+                  @foreach($grupo->grupoMaterias->sortBy('orden') as $gm)
+                    <div class="d-flex align-items-center gap-1">
+                      <span class="badge bg-secondary" style="font-size:0.7rem;min-width:38px">
+                        {{ $gm->materia?->sigla ?? '?' }}
+                      </span>
+                      <small class="text-muted">
+                        @if($gm->hora_inicio)
+                          {{ substr($gm->hora_inicio, 0, 5) }}–{{ substr($gm->hora_fin, 0, 5) }}
+                        @endif
+                        · {{ $gm->docente?->persona?->nombre ?? '— sin docente' }}
+                      </small>
+                    </div>
                   @endforeach
-                </select>
-                <button type="submit" class="btn btn-sm btn-outline-primary" title="Asignar docente"><i class="bi bi-check2"></i></button>
-              </form>
+                </div>
+              @endif
             </td>
+
+            {{-- Cupo --}}
             <td class="text-center">
+              @php
+                $pct = $grupo->cupo_max > 0
+                  ? round(($grupo->inscritos_actuales / $grupo->cupo_max) * 100)
+                  : 0;
+              @endphp
               <span class="badge {{ $grupo->inscritos_actuales >= $grupo->cupo_max ? 'bg-danger' : 'bg-secondary' }}">
                 {{ $grupo->inscritos_actuales }} / {{ $grupo->cupo_max }}
               </span>
+              <div class="progress mt-1" style="height:4px;min-width:60px">
+                <div class="progress-bar {{ $pct >= 90 ? 'bg-danger' : ($pct >= 60 ? 'bg-warning' : 'bg-success') }}"
+                     style="width:{{ $pct }}%"></div>
+              </div>
             </td>
+
+            {{-- Estado --}}
             <td>
               @if($grupo->activo)
                 <span class="badge-cup badge-activo">Activo</span>
@@ -111,8 +157,10 @@
                 <span class="badge-cup badge-inactivo">Archivado</span>
               @endif
             </td>
+
+            {{-- Acciones --}}
             <td class="text-end" style="min-width:110px">
-              <a href="{{ route('grupos.edit', $grupo) }}" class="btn-action btn-action-edit" title="Editar">
+              <a href="{{ route('grupos.edit', $grupo) }}" class="btn-action btn-action-edit" title="Editar materias y horarios">
                 <i class="bi bi-pencil"></i>
               </a>
               @if($grupo->activo)
@@ -148,9 +196,15 @@
                 </form>
               @endif
             </td>
+
           </tr>
         @empty
-          <tr><td colspan="8" class="text-center py-4 text-muted">No hay grupos para este filtro. Usá "Generar automáticos" para crearlos.</td></tr>
+          <tr>
+            <td colspan="7" class="text-center py-4 text-muted">
+              No hay grupos para este filtro.
+              Usá "Generar automáticos" para crearlos o "Nuevo Grupo" para crear uno manualmente.
+            </td>
+          </tr>
         @endforelse
       </tbody>
     </table>

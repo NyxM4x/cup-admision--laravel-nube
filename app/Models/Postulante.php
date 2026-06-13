@@ -34,4 +34,16 @@ class Postulante extends Model
     {
         return $this->hasOne(Inscripcion::class)->where('estado', 'activa');
     }
+
+    public function notas()
+    {
+        return $this->hasMany(Nota::class);
+    }
+
+    public function grupos()
+    {
+        return $this->belongsToMany(Grupo::class, 'grupo_postulante')
+            ->withPivot('fecha_asignacion')
+            ->withTimestamps();
+    }
 }

@@ -7,6 +7,7 @@ use App\Http\Controllers\DashboardPostulanteController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\DashboardAdminController;
 use App\Http\Controllers\GrupoPostulanteController;
+use App\Http\Controllers\NotaController;
 // ══════════════════════════════════════════════
 // PÁGINA DE INICIO
 // ══════════════════════════════════════════════
@@ -20,6 +21,10 @@ Route::get('/', function () {
 // DASHBOARD PRINCIPAL (requiere auth)
 // ══════════════════════════════════════════════
 Route::middleware('auth')->get('/dashboard', function () {
+    if (auth()->user()->rol?->nombre === 'Postulante') {
+        return redirect()->route('dashboard.postulante');
+    }
+
     return view('dashboard');
 })->name('dashboard');
 
@@ -78,7 +83,7 @@ Route::middleware('auth')->group(function () {
 
     Route::get('mis-grupos/{inscripcion}',              [GrupoPostulanteController::class, 'seleccionar'])->name('grupos.seleccionar');
     Route::post('mis-grupos/{inscripcion}/confirmar',   [GrupoPostulanteController::class, 'confirmar'])->name('grupos.confirmar');
-    Route::delete('mis-grupos/{inscripcion}/{grupo}',   [GrupoPostulanteController::class, 'abandonar'])->name('grupos.abandonar');
+
     // CU07 — Periodos
     Route::resource('periodos', PeriodoController::class)->except(['destroy']);
     Route::post('periodos/{periodo}/archivar',  [PeriodoController::class, 'archivar'])->name('periodos.archivar');
@@ -100,11 +105,18 @@ Route::middleware('auth')->group(function () {
     Route::post('horarios/{horario}/archivar',  [HorarioController::class, 'archivar'])->name('horarios.archivar');
     Route::post('horarios/{horario}/reactivar', [HorarioController::class, 'reactivar'])->name('horarios.reactivar');
 
+    // CU21/CU22 — Notas de exámenes
+    // ⚠️ notas/masivo DEBE ir antes de notas/{grupo} para evitar conflicto de parámetros
+    Route::get('notas',                             [NotaController::class, 'index'])->name('notas.index');
+    Route::post('notas',                            [NotaController::class, 'store'])->name('notas.store');
+    Route::post('notas/masivo/{grupoMateria}',      [NotaController::class, 'storeMasivo'])->name('notas.masivo');
+    Route::get('notas/{grupo}',                     [NotaController::class, 'show'])->name('notas.show');
+
     // CU17/CU18/CU20 — Grupos (generación, docente, aula)
     Route::get('grupos/generar-automaticos',       [GrupoController::class, 'formGenerar'])->name('grupos.generar-automaticos.form');
     Route::post('grupos/generar-automaticos',      [GrupoController::class, 'generarAutomaticos'])->name('grupos.generar-automaticos');
+    Route::get('grupos/docentes-por-materia',      [GrupoController::class, 'docentesPorMateria'])->name('grupos.docentes-por-materia');  // ← NUEVO
     Route::resource('grupos', GrupoController::class)->except(['destroy', 'show']);
-    Route::post('grupos/{grupo}/asignar-docente',  [GrupoController::class, 'asignarDocente'])->name('grupos.asignar-docente');
     Route::post('grupos/{grupo}/asignar-aula',     [GrupoController::class, 'asignarAula'])->name('grupos.asignar-aula');
     Route::post('grupos/{grupo}/archivar',         [GrupoController::class, 'archivar'])->name('grupos.archivar');
     Route::post('grupos/{grupo}/reactivar',        [GrupoController::class, 'reactivar'])->name('grupos.reactivar');

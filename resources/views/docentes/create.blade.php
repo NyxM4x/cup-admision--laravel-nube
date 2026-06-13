@@ -1,7 +1,5 @@
 @extends('layouts.base')
-
 @section('titulo', 'Nuevo Docente')
-
 @section('contenido')
 
 <div class="page-header d-flex justify-content-between align-items-start mb-4">
@@ -79,7 +77,7 @@
       </h5>
 
       <div class="row g-3 mb-3">
-        <div class="col-md-8">
+        <div class="col-md-5">
           <label class="form-label">Profesión</label>
           <select name="profesion_id" class="form-select">
             <option value="">— Sin especificar —</option>
@@ -90,7 +88,27 @@
             @endforeach
           </select>
         </div>
+
+        {{-- ▼ CAMPO NUEVO: Materia que dicta --}}
         <div class="col-md-4">
+          <label class="form-label fw-semibold">
+            Materia que dicta <span class="text-danger">*</span>
+          </label>
+          <select name="materia" class="form-select @error('materia') is-invalid @enderror" required>
+            <option value="">— Seleccionar materia —</option>
+            @foreach($materias as $mat)
+              <option value="{{ $mat->sigla }}" {{ old('materia') === $mat->sigla ? 'selected' : '' }}>
+                {{ $mat->sigla }} — {{ $mat->nombre }}
+              </option>
+            @endforeach
+          </select>
+          @error('materia')
+            <div class="invalid-feedback">{{ $message }}</div>
+          @enderror
+          <small class="text-muted">Determina qué grupos puede recibir este docente</small>
+        </div>
+
+        <div class="col-md-3">
           <label class="form-label">Años de experiencia <span class="text-danger">*</span></label>
           <input type="number" name="anios_experiencia" class="form-control" value="{{ old('anios_experiencia', 0) }}" min="0" max="50" required>
         </div>
@@ -108,7 +126,6 @@
       </div>
 
       <hr>
-
       <div class="d-flex gap-2 justify-content-end">
         <a href="{{ route('docentes.index') }}" class="btn btn-outline-secondary">Cancelar</a>
         <button type="submit" class="btn btn-cup-primary">

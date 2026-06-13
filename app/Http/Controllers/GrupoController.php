@@ -6,6 +6,7 @@ use App\Domain\Bitacora\Services\BitacoraLogger;
 use App\Models\Aula;
 use App\Models\Docente;
 use App\Models\Grupo;
+use App\Models\GrupoMateria;
 use App\Models\Horario;
 use App\Models\Materia;
 use App\Models\Periodo;
@@ -17,18 +18,28 @@ use Illuminate\Support\Facades\DB;
 class GrupoController extends Controller
 {
     public const MAX_GRUPOS_DOCENTE = 4;
-    public const CUPO_DEFAULT = 70;
+    public const CUPO_DEFAULT       = 70;
+
+    // ══════════════════════════════════════════════════════════
+    // LISTADO
+    // ══════════════════════════════════════════════════════════
 
     public function index(Request $request)
     {
-        $q = trim($request->input('q', ''));
-
+        $q            = trim($request->input('q', ''));
         $periodoActivo = Periodo::where('activo', true)->orderBy('id', 'desc')->first();
-        $periodoId = $request->input('periodo_id', $periodoActivo?->id);
-        $periodos = Periodo::orderBy('id', 'desc')->get();
+        $periodoId    = $request->input('periodo_id', $periodoActivo?->id);
+        $periodos     = Periodo::orderBy('id', 'desc')->get();
 
-        $query = Grupo::with(['periodo', 'materia', 'horario', 'aula', 'docente.persona'])
-            ->orderBy('materia_id')
+        $query = Grupo::with([
+                'periodo',
+                'horario',
+                'aula',
+                'grupoMaterias.materia',
+                'grupoMaterias.docente.persona',
+                'grupoMaterias.aula',
+            ])
+            ->orderBy('horario_id')
             ->orderBy('codigo');
 
         if ($periodoId && $periodoId !== 'todos') {
@@ -38,19 +49,23 @@ class GrupoController extends Controller
         if ($q !== '') {
             $query->where(function ($w) use ($q) {
                 $w->whereRaw('unaccent(codigo) ilike unaccent(?)', ["%{$q}%"])
-                  ->orWhereHas('materia', fn ($m) => $m->whereRaw('unaccent(nombre) ilike unaccent(?)', ["%{$q}%"])
-                                                       ->orWhereRaw('unaccent(sigla) ilike unaccent(?)', ["%{$q}%"]));
+                  ->orWhereHas('horario', fn ($h) =>
+                      $h->whereRaw('unaccent(turno) ilike unaccent(?)', ["%{$q}%"])
+                  );
             });
         }
 
-        $grupos = $query->paginate(30)->withQueryString();
+        $grupos = $query->paginate(20)->withQueryString();
+        $aulas  = Aula::where('activo', true)->orderBy('codigo')->get();
 
-        // Para asignación inline de docente/aula
-        $docentes = Docente::with('persona')->where('activo', true)->get();
-        $aulas = Aula::where('activo', true)->orderBy('codigo')->get();
-
-        return view('grupos.index', compact('grupos', 'q', 'periodos', 'periodoId', 'periodoActivo', 'docentes', 'aulas'));
+        return view('grupos.index', compact(
+            'grupos', 'q', 'periodos', 'periodoId', 'periodoActivo', 'aulas'
+        ));
     }
+
+    // ══════════════════════════════════════════════════════════
+    // CREAR GRUPO (turno completo con 4 materias)
+    // ══════════════════════════════════════════════════════════
 
     public function create()
     {
@@ -59,43 +74,82 @@ class GrupoController extends Controller
 
     public function store(Request $request)
     {
+        // Validar cabecera del grupo
         $data = $request->validate([
             'codigo'     => 'required|string|max:20',
             'periodo_id' => 'required|exists:periodos,id',
-            'materia_id' => 'required|exists:materias,id',
-            'horario_id' => 'nullable|exists:horarios,id',
+            'horario_id' => 'required|exists:horarios,id',
             'aula_id'    => 'nullable|exists:aulas,id',
-            'docente_id' => 'nullable|exists:docentes,id',
             'cupo_max'   => 'required|integer|min:1|max:300',
         ]);
 
-        // Unicidad codigo dentro de periodo+materia
+        // Validar los 4 bloques de materias
+        $request->validate([
+            'bloques'                  => 'required|array|min:1',
+            'bloques.*.materia_id'     => 'required|exists:materias,id',
+            'bloques.*.docente_id'     => 'nullable|exists:docentes,id',
+            'bloques.*.hora_inicio'    => 'required|date_format:H:i',
+            'bloques.*.hora_fin'       => 'required|date_format:H:i|after:bloques.*.hora_inicio',
+            'bloques.*.aula_id'        => 'nullable|exists:aulas,id',
+        ]);
+
+        // Verificar unicidad de código en el periodo
         $dup = Grupo::where('periodo_id', $data['periodo_id'])
-            ->where('materia_id', $data['materia_id'])
             ->where('codigo', $data['codigo'])->exists();
         if ($dup) {
-            return back()->withInput()->withErrors(['codigo' => 'Ya existe un grupo con ese código para esa materia/periodo.']);
+            return back()->withInput()
+                ->withErrors(['codigo' => 'Ya existe un grupo con ese código en este periodo.']);
         }
 
-        if ($error = $this->validarReglas($data)) {
+        // Verificar que no se repita materia en los bloques
+        $materias = collect($request->bloques)->pluck('materia_id');
+        if ($materias->unique()->count() !== $materias->count()) {
+            return back()->withInput()
+                ->withErrors(['bloques' => 'No puede repetir la misma materia en dos bloques.']);
+        }
+
+        // Validar límite docente (máx 4 grupos por periodo por cada docente)
+        if ($error = $this->validarLimiteDocentes($request->bloques, $data['periodo_id'])) {
             return back()->withInput()->withErrors($error);
         }
 
-        $grupo = Grupo::create($data + ['inscritos_actuales' => 0, 'activo' => true]);
+        DB::transaction(function () use ($data, $request) {
+            $grupo = Grupo::create($data + [
+                'inscritos_actuales' => 0,
+                'activo'             => true,
+            ]);
 
-        BitacoraLogger::registrar(
-            'GRUPO_CREADO',
-            'Grupos',
-            "Grupo {$grupo->codigo} creado (periodo #{$grupo->periodo_id})",
-            Auth::id()
-        );
+            foreach ($request->bloques as $orden => $bloque) {
+                GrupoMateria::create([
+                    'grupo_id'    => $grupo->id,
+                    'materia_id'  => $bloque['materia_id'],
+                    'docente_id'  => $bloque['docente_id'] ?? null,
+                    'hora_inicio' => $bloque['hora_inicio'],
+                    'hora_fin'    => $bloque['hora_fin'],
+                    'aula_id'     => $bloque['aula_id'] ?? null,
+                    'orden'       => $orden + 1,
+                ]);
+            }
 
-        return redirect()->route('grupos.index', ['periodo_id' => $grupo->periodo_id])
-            ->with('success', "Grupo '{$grupo->codigo}' creado correctamente.");
+            BitacoraLogger::registrar(
+                'GRUPO_CREADO',
+                'Grupos',
+                "Grupo {$grupo->codigo} creado (turno: {$grupo->horario?->turno}) — periodo #{$grupo->periodo_id}",
+                Auth::id()
+            );
+        });
+
+        return redirect()->route('grupos.index', ['periodo_id' => $data['periodo_id']])
+            ->with('success', "Grupo '{$data['codigo']}' creado correctamente.");
     }
+
+    // ══════════════════════════════════════════════════════════
+    // EDITAR GRUPO
+    // ══════════════════════════════════════════════════════════
 
     public function edit(Grupo $grupo)
     {
+        $grupo->load('grupoMaterias.materia', 'grupoMaterias.docente', 'grupoMaterias.aula');
         return view('grupos.edit', $this->datosFormulario() + compact('grupo'));
     }
 
@@ -103,105 +157,135 @@ class GrupoController extends Controller
     {
         $data = $request->validate([
             'codigo'     => 'required|string|max:20',
-            'horario_id' => 'nullable|exists:horarios,id',
+            'horario_id' => 'required|exists:horarios,id',
             'aula_id'    => 'nullable|exists:aulas,id',
-            'docente_id' => 'nullable|exists:docentes,id',
             'cupo_max'   => 'required|integer|min:1|max:300',
         ]);
 
-        $data['periodo_id'] = $grupo->periodo_id;
-        $data['materia_id'] = $grupo->materia_id;
+        $request->validate([
+            'bloques'                  => 'required|array|min:1',
+            'bloques.*.materia_id'     => 'required|exists:materias,id',
+            'bloques.*.docente_id'     => 'nullable|exists:docentes,id',
+            'bloques.*.hora_inicio'    => 'required|date_format:H:i',
+            'bloques.*.hora_fin'       => 'required|date_format:H:i|after:bloques.*.hora_inicio',
+            'bloques.*.aula_id'        => 'nullable|exists:aulas,id',
+        ]);
 
-        if ($error = $this->validarReglas($data, $grupo->id)) {
+        $materias = collect($request->bloques)->pluck('materia_id');
+        if ($materias->unique()->count() !== $materias->count()) {
+            return back()->withInput()
+                ->withErrors(['bloques' => 'No puede repetir la misma materia en dos bloques.']);
+        }
+
+        if ($error = $this->validarLimiteDocentes($request->bloques, $grupo->periodo_id, $grupo->id)) {
             return back()->withInput()->withErrors($error);
         }
 
-        $grupo->update($data);
+        DB::transaction(function () use ($data, $request, $grupo) {
+            $grupo->update($data);
 
-        BitacoraLogger::registrar(
-            'GRUPO_EDITADO',
-            'Grupos',
-            "Grupo {$grupo->codigo} editado",
-            Auth::id()
-        );
+            // Reemplazar todos los bloques (delete + recrear — tabla vacía en producción)
+            $grupo->grupoMaterias()->delete();
+
+            foreach ($request->bloques as $orden => $bloque) {
+                GrupoMateria::create([
+                    'grupo_id'    => $grupo->id,
+                    'materia_id'  => $bloque['materia_id'],
+                    'docente_id'  => $bloque['docente_id'] ?? null,
+                    'hora_inicio' => $bloque['hora_inicio'],
+                    'hora_fin'    => $bloque['hora_fin'],
+                    'aula_id'     => $bloque['aula_id'] ?? null,
+                    'orden'       => $orden + 1,
+                ]);
+            }
+
+            BitacoraLogger::registrar(
+                'GRUPO_EDITADO',
+                'Grupos',
+                "Grupo {$grupo->codigo} editado",
+                Auth::id()
+            );
+        });
 
         return redirect()->route('grupos.index', ['periodo_id' => $grupo->periodo_id])
             ->with('success', "Grupo '{$grupo->codigo}' actualizado.");
     }
 
+    // ══════════════════════════════════════════════════════════
+    // ARCHIVAR / REACTIVAR
+    // ══════════════════════════════════════════════════════════
+
     public function archivar(Grupo $grupo)
     {
         $grupo->update(['activo' => false]);
-
         BitacoraLogger::registrar('GRUPO_ARCHIVADO', 'Grupos', "Grupo {$grupo->codigo} archivado", Auth::id());
-
         return back()->with('success', "Grupo '{$grupo->codigo}' archivado.");
     }
 
     public function reactivar(Grupo $grupo)
     {
         $grupo->update(['activo' => true]);
-
         BitacoraLogger::registrar('GRUPO_REACTIVADO', 'Grupos', "Grupo {$grupo->codigo} reactivado", Auth::id());
-
         return back()->with('success', "Grupo '{$grupo->codigo}' reactivado.");
     }
 
-    // Pantalla de generación automática (resumen + botón)
+    // ══════════════════════════════════════════════════════════
+    // GENERACIÓN AUTOMÁTICA (CU17)
+    // Genera grupos vacíos (sin bloques) por turno; el admin los configura luego
+    // ══════════════════════════════════════════════════════════
+
     public function formGenerar()
     {
         $periodo = Periodo::where('activo', true)->orderBy('id', 'desc')->first();
 
-        $habilitados = 0;
-        $gruposPorMateria = 0;
-        $materiasCount = Materia::where('activo', true)->count();
+        $habilitados      = 0;
+        $gruposPorTurno   = 0;
+        $turnosDisponibles = Horario::where('activo', true)->count();
 
         if ($periodo) {
-            $habilitados = Postulante::where('activo', true)
+            $habilitados    = Postulante::where('activo', true)
                 ->whereHas('inscripciones', fn ($w) => $w->where('periodo_id', $periodo->id))
                 ->count();
-            $gruposPorMateria = max(1, (int) ceil($habilitados / self::CUPO_DEFAULT));
+            // Necesitamos ceil(habilitados/70) grupos por cada turno
+            $gruposPorTurno = max(1, (int) ceil($habilitados / self::CUPO_DEFAULT));
         }
 
         $existentes = $periodo ? Grupo::where('periodo_id', $periodo->id)->count() : 0;
 
         return view('grupos.generar-automaticos', compact(
-            'periodo', 'habilitados', 'gruposPorMateria', 'materiasCount', 'existentes'
+            'periodo', 'habilitados', 'gruposPorTurno', 'turnosDisponibles', 'existentes'
         ));
     }
 
-    // CU17 — Generación automática de grupos: CEIL(habilitados/70) por materia
     public function generarAutomaticos(Request $request)
     {
         $periodo = Periodo::where('activo', true)->orderBy('id', 'desc')->first();
         if (! $periodo) {
-            return back()->withErrors(['general' => 'No hay un periodo activo para generar grupos.']);
+            return back()->withErrors(['general' => 'No hay un periodo activo.']);
         }
 
-        $habilitados = Postulante::where('activo', true)
+        $horarios = Horario::where('activo', true)->orderBy('hora_inicio')->get();
+        if ($horarios->isEmpty()) {
+            return back()->withErrors(['general' => 'No hay horarios activos. Crea primero los turnos Mañana y Tarde.']);
+        }
+
+        $habilitados    = Postulante::where('activo', true)
             ->whereHas('inscripciones', fn ($w) => $w->where('periodo_id', $periodo->id))
             ->count();
 
-        $gruposPorMateria = max(1, (int) ceil($habilitados / self::CUPO_DEFAULT));
-        $materias = Materia::where('activo', true)->orderBy('sigla')->get();
+        $gruposPorTurno = max(1, (int) ceil($habilitados / self::CUPO_DEFAULT));
+        $creados        = 0;
 
-        if ($materias->isEmpty()) {
-            return back()->withErrors(['general' => 'No hay materias activas para generar grupos.']);
-        }
-
-        $creados = 0;
-
-        DB::transaction(function () use ($periodo, $materias, $gruposPorMateria, &$creados) {
-            foreach ($materias as $materia) {
-                // Idempotente: solo completa hasta el objetivo (no duplica)
+        DB::transaction(function () use ($periodo, $horarios, $gruposPorTurno, &$creados) {
+            foreach ($horarios as $horario) {
                 $existentes = Grupo::where('periodo_id', $periodo->id)
-                    ->where('materia_id', $materia->id)->count();
+                    ->where('horario_id', $horario->id)->count();
 
-                for ($n = $existentes + 1; $n <= $gruposPorMateria; $n++) {
+                for ($n = $existentes + 1; $n <= $gruposPorTurno; $n++) {
                     Grupo::create([
-                        'codigo'             => "G-{$periodo->id}-{$materia->sigla}-{$n}",
+                        'codigo'             => "G-{$periodo->id}-{$horario->codigo}-{$n}",
                         'periodo_id'         => $periodo->id,
-                        'materia_id'         => $materia->id,
+                        'horario_id'         => $horario->id,
                         'cupo_max'           => self::CUPO_DEFAULT,
                         'inscritos_actuales' => 0,
                         'activo'             => true,
@@ -213,133 +297,121 @@ class GrupoController extends Controller
             BitacoraLogger::registrar(
                 'GRUPOS_GENERADOS_AUTO',
                 'Grupos',
-                "Generación automática periodo #{$periodo->id}: {$creados} grupos nuevos "
-                    ."({$gruposPorMateria} por materia × {$materias->count()} materias)",
+                "Generación automática periodo #{$periodo->id}: {$creados} grupos nuevos",
                 Auth::id()
             );
         });
 
         $msg = $creados > 0
-            ? "Se generaron {$creados} grupos ({$gruposPorMateria} por materia)."
-            : 'No se generaron grupos nuevos: ya existían suficientes para este periodo.';
+            ? "Se generaron {$creados} grupos ({$gruposPorTurno} por turno × {$horarios->count()} turnos). Ahora configura las materias de cada grupo."
+            : 'No se generaron grupos nuevos: ya existían suficientes.';
 
-        return redirect()->route('grupos.index', ['periodo_id' => $periodo->id])->with('success', $msg);
+        return redirect()->route('grupos.index', ['periodo_id' => $periodo->id])
+            ->with('success', $msg);
     }
 
-    // CU18 — Asignar docente (máx 4 grupos por docente en el periodo)
-    public function asignarDocente(Request $request, Grupo $grupo)
+    // ══════════════════════════════════════════════════════════
+    // AJAX: Docentes filtrados por sigla de materia
+    // ══════════════════════════════════════════════════════════
+
+    public function docentesPorMateria(Request $request)
     {
-        $request->validate(['docente_id' => 'required|exists:docentes,id']);
-        $docenteId = (int) $request->docente_id;
+        $materiaId = $request->input('materia_id');
 
-        $cuenta = Grupo::where('periodo_id', $grupo->periodo_id)
-            ->where('docente_id', $docenteId)
-            ->where('id', '!=', $grupo->id)
-            ->count();
-
-        if ($cuenta >= self::MAX_GRUPOS_DOCENTE) {
-            return back()->withErrors([
-                'docente_id' => 'El docente ya tiene '.self::MAX_GRUPOS_DOCENTE.' grupos en este periodo (máximo permitido).',
-            ]);
+        if (! $materiaId) {
+            return response()->json([]);
         }
 
-        $grupo->update(['docente_id' => $docenteId]);
+        $materia = Materia::find($materiaId);
+        if (! $materia) {
+            return response()->json([]);
+        }
 
-        $docente = Docente::with('persona')->find($docenteId);
-        BitacoraLogger::registrar(
-            'DOCENTE_ASIGNADO',
-            'Grupos',
-            "Docente {$docente?->persona?->nombre} asignado al grupo {$grupo->codigo}",
-            Auth::id()
-        );
+        // Filtrar docentes cuya columna 'materia' coincide con la sigla
+        $docentes = Docente::with('persona')
+            ->where('activo', true)
+            ->where('materia', $materia->sigla)
+            ->orderBy('id')
+            ->get()
+            ->map(fn ($d) => [
+                'id'     => $d->id,
+                'nombre' => $d->persona?->nombre ?? 'Docente #' . $d->id,
+            ]);
 
-        return back()->with('success', 'Docente asignado al grupo correctamente.');
+        return response()->json($docentes);
     }
 
-    // CU20 — Asignar aula (cupo ≤ capacidad y sin choque aula+horario)
+    // ══════════════════════════════════════════════════════════
+    // ASIGNAR AULA AL GRUPO (acceso rápido desde listado)
+    // ══════════════════════════════════════════════════════════
+
     public function asignarAula(Request $request, Grupo $grupo)
     {
         $request->validate(['aula_id' => 'required|exists:aulas,id']);
-        $aulaId = (int) $request->aula_id;
 
-        if ($error = $this->validarAula($aulaId, $grupo->cupo_max, $grupo->horario_id, $grupo->periodo_id, $grupo->id)) {
-            return back()->withErrors(['aula_id' => $error]);
-        }
+        $grupo->update(['aula_id' => $request->aula_id]);
 
-        $grupo->update(['aula_id' => $aulaId]);
-
-        $aula = Aula::find($aulaId);
+        $aula = Aula::find($request->aula_id);
         BitacoraLogger::registrar(
-            'AULA_ASIGNADA',
+            'AULA_ASIGNADA_GRUPO',
             'Grupos',
-            "Aula {$aula?->codigo} asignada al grupo {$grupo->codigo}",
+            "Aula {$aula?->codigo} asignada al grupo {$grupo->codigo} (aula por defecto)",
             Auth::id()
         );
 
-        return back()->with('success', 'Aula asignada al grupo correctamente.');
+        return back()->with('success', 'Aula por defecto asignada al grupo.');
     }
 
-    // ── Helpers ──────────────────────────────────────────────
+    // ══════════════════════════════════════════════════════════
+    // HELPERS PRIVADOS
+    // ══════════════════════════════════════════════════════════
 
     private function datosFormulario(): array
     {
         return [
             'periodos' => Periodo::orderBy('id', 'desc')->get(),
-            'materias' => Materia::where('activo', true)->orderBy('sigla')->get(),
             'horarios' => Horario::where('activo', true)->orderBy('hora_inicio')->get(),
             'aulas'    => Aula::where('activo', true)->orderBy('codigo')->get(),
-            'docentes' => Docente::with('persona')->where('activo', true)->get(),
+            'materias' => Materia::where('activo', true)->orderBy('sigla')->get(),
+            // Docentes organizados por sigla de materia para el JS inicial
+            'docentesPorMateria' => Docente::with('persona')
+                ->where('activo', true)
+                ->get()
+                ->groupBy('materia')
+                ->map(fn ($grp) => $grp->map(fn ($d) => [
+                    'id'     => $d->id,
+                    'nombre' => $d->persona?->nombre ?? 'Docente #' . $d->id,
+                ])),
         ];
     }
 
-    // Valida cupo vs capacidad, límite de docente y choque aula+horario. Devuelve array de errores o null.
-    private function validarReglas(array $data, ?int $ignoreId = null): ?array
+    /**
+     * Valida que ningún docente en los bloques supere el límite de 4 grupos en el periodo.
+     * Devuelve array de errores o null si todo OK.
+     */
+    private function validarLimiteDocentes(array $bloques, int $periodoId, ?int $ignoreGrupoId = null): ?array
     {
-        // Docente: máximo 4 grupos por periodo
-        if (! empty($data['docente_id'])) {
-            $cuenta = Grupo::where('periodo_id', $data['periodo_id'])
-                ->where('docente_id', $data['docente_id'])
-                ->when($ignoreId, fn ($w) => $w->where('id', '!=', $ignoreId))
-                ->count();
+        $docenteIds = collect($bloques)
+            ->pluck('docente_id')
+            ->filter()
+            ->unique();
+
+        foreach ($docenteIds as $docenteId) {
+            // Contar grupos donde este docente tiene al menos un bloque en el periodo
+            $cuenta = GrupoMateria::whereHas('grupo', function ($q) use ($periodoId, $ignoreGrupoId) {
+                    $q->where('periodo_id', $periodoId);
+                    if ($ignoreGrupoId) {
+                        $q->where('id', '!=', $ignoreGrupoId);
+                    }
+                })
+                ->where('docente_id', $docenteId)
+                ->distinct('grupo_id')
+                ->count('grupo_id');
+
             if ($cuenta >= self::MAX_GRUPOS_DOCENTE) {
-                return ['docente_id' => 'El docente ya tiene '.self::MAX_GRUPOS_DOCENTE.' grupos en este periodo.'];
-            }
-        }
-
-        // Aula: capacidad y choque con horario
-        if (! empty($data['aula_id'])) {
-            $error = $this->validarAula(
-                (int) $data['aula_id'],
-                (int) $data['cupo_max'],
-                $data['horario_id'] ?? null,
-                (int) $data['periodo_id'],
-                $ignoreId
-            );
-            if ($error) {
-                return ['aula_id' => $error];
-            }
-        }
-
-        return null;
-    }
-
-    private function validarAula(int $aulaId, int $cupoMax, $horarioId, int $periodoId, ?int $ignoreId = null): ?string
-    {
-        $aula = Aula::find($aulaId);
-        if ($aula && $cupoMax > $aula->capacidad) {
-            return "El cupo ({$cupoMax}) supera la capacidad del aula {$aula->codigo} ({$aula->capacidad}).";
-        }
-
-        // Choque: misma aula + mismo horario en el mismo periodo (grupos activos)
-        if ($horarioId) {
-            $choca = Grupo::where('periodo_id', $periodoId)
-                ->where('aula_id', $aulaId)
-                ->where('horario_id', $horarioId)
-                ->where('activo', true)
-                ->when($ignoreId, fn ($w) => $w->where('id', '!=', $ignoreId))
-                ->exists();
-            if ($choca) {
-                return 'Esa aula ya está ocupada en ese horario (choque de aula/horario).';
+                $docente = Docente::with('persona')->find($docenteId);
+                $nombre  = $docente?->persona?->nombre ?? "ID #{$docenteId}";
+                return ['bloques' => "El docente {$nombre} ya tiene " . self::MAX_GRUPOS_DOCENTE . " grupos en este periodo (máximo permitido)."];
             }
         }
 
