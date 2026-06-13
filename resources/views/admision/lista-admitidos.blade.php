@@ -108,7 +108,9 @@
 </div>
 
 @if($resultados instanceof \Illuminate\Pagination\LengthAwarePaginator && $resultados->hasPages())
-  <div class="mt-3 d-flex justify-content-center">{{ $resultados->links() }}</div>
+  <div class="mt-3 d-flex justify-content-center">
+    {{ $resultados->links('pagination::bootstrap-5') }}
+  </div>
 @endif
 
 @endsection

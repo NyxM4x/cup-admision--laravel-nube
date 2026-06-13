@@ -1,4 +1,4 @@
-@extends('layouts.base')
+﻿@extends('layouts.base')
 
 @section('titulo', 'Grupos')
 
@@ -214,7 +214,7 @@
 
 @if($grupos->hasPages())
   <div class="mt-3 d-flex justify-content-center">
-    {{ $grupos->links() }}
+    {{ $grupos->links('pagination::bootstrap-5') }}
   </div>
 @endif
 

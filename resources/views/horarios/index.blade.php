@@ -1,4 +1,4 @@
-@extends('layouts.base')
+﻿@extends('layouts.base')
 
 @section('titulo', 'Horarios')
 
@@ -99,8 +99,9 @@
 
 @if($horarios->hasPages())
   <div class="mt-3 d-flex justify-content-center">
-    {{ $horarios->links() }}
+    {{ $horarios->links('pagination::bootstrap-5') }}
   </div>
 @endif
 
 @endsection
+

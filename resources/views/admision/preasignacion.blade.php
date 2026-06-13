@@ -1,4 +1,4 @@
-@extends('layouts.base')
+﻿@extends('layouts.base')
 
 @section('titulo', 'Pre-asignación')
 
@@ -74,8 +74,9 @@
   </div>
 
   @if($ranking->hasPages())
-    <div class="mt-3 d-flex justify-content-center">{{ $ranking->links() }}</div>
+    <div class="mt-3 d-flex justify-content-center">{{ $ranking->links('pagination::bootstrap-5') }}</div>
   @endif
 @endif
 
 @endsection
+

@@ -1,4 +1,4 @@
-@extends('layouts.base')
+﻿@extends('layouts.base')
 
 @section('titulo', 'Gestión de Roles')
 
@@ -132,7 +132,7 @@
 
     @if($roles->hasPages())
       <div class="mt-3 d-flex justify-content-center">
-        {{ $roles->withQueryString()->links() }}
+        {{ $roles->withQueryString()->links('pagination::bootstrap-5') }}
       </div>
     @endif
 
@@ -140,3 +140,4 @@
 </div>
 
 @endsection
+

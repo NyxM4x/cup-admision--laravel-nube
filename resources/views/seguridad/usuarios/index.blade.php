@@ -1,4 +1,4 @@
-@extends('layouts.base')
+﻿@extends('layouts.base')
 
 @section('titulo', 'Gestión de Usuarios')
 
@@ -147,7 +147,7 @@
 
     @if($usuarios->hasPages())
       <div class="mt-3 d-flex justify-content-center">
-        {{ $usuarios->withQueryString()->links() }}
+        {{ $usuarios->withQueryString()->links('pagination::bootstrap-5') }}
       </div>
     @endif
 
@@ -155,4 +155,5 @@
 </div>
 
 @endsection
+
 

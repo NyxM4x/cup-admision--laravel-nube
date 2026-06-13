@@ -1,4 +1,4 @@
-@extends('layouts.base')
+﻿@extends('layouts.base')
 
 @section('titulo', 'Periodos')
 
@@ -115,8 +115,9 @@
 
 @if($periodos->hasPages())
   <div class="mt-3 d-flex justify-content-center">
-    {{ $periodos->links() }}
+    {{ $periodos->links('pagination::bootstrap-5') }}
   </div>
 @endif
 
 @endsection
+

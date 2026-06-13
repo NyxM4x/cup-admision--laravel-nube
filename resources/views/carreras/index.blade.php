@@ -1,4 +1,4 @@
-@extends('layouts.base')
+﻿@extends('layouts.base')
 
 @section('titulo', 'Carreras')
 
@@ -123,8 +123,9 @@
 
 @if($carreras->hasPages())
   <div class="mt-3 d-flex justify-content-center">
-    {{ $carreras->links() }}
+    {{ $carreras->links('pagination::bootstrap-5') }}
   </div>
 @endif
 
 @endsection
+

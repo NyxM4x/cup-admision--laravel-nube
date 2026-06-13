@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 
 namespace App\Providers;
 
@@ -14,10 +14,10 @@ class AppServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
-        // Paginación con Bootstrap 5
+        // PaginaciÃ³n con Bootstrap 5
         Paginator::useBootstrapFive();
 
-        // Forzar HTTPS en producción
+        // Forzar HTTPS en producciÃ³n
         if ($this->app->environment('production')) {
             \Illuminate\Support\Facades\URL::forceScheme('https');
         }

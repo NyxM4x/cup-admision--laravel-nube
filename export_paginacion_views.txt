@@ -1,0 +1,22 @@
+﻿
+Path                                                                                     LineNumber
+----                                                                                     ----------
+C:\laragon\www\cup-admision-laravel\resources\views\admision\lista-admitidos.blade.php          111
+C:\laragon\www\cup-admision-laravel\resources\views\admision\preasignacion.blade.php             77
+C:\laragon\www\cup-admision-laravel\resources\views\admision\resultados.blade.php                95
+C:\laragon\www\cup-admision-laravel\resources\views\bitacora\index.blade.php                    166
+C:\laragon\www\cup-admision-laravel\resources\views\carreras\index.blade.php                    126
+C:\laragon\www\cup-admision-laravel\resources\views\documentos\index.blade.php                  106
+C:\laragon\www\cup-admision-laravel\resources\views\gestion-global\aulas\index.blade.php        171
+C:\laragon\www\cup-admision-laravel\resources\views\grupos\index.blade.php                      217
+C:\laragon\www\cup-admision-laravel\resources\views\horarios\index.blade.php                    102
+C:\laragon\www\cup-admision-laravel\resources\views\layouts\base.blade.php                      368
+C:\laragon\www\cup-admision-laravel\resources\views\layouts\navigation.blade.php                 13
+C:\laragon\www\cup-admision-laravel\resources\views\materias\index.blade.php                    106
+C:\laragon\www\cup-admision-laravel\resources\views\periodos\index.blade.php                    118
+C:\laragon\www\cup-admision-laravel\resources\views\postulantes\index.blade.php                 159
+C:\laragon\www\cup-admision-laravel\resources\views\requisitos\index.blade.php                  122
+C:\laragon\www\cup-admision-laravel\resources\views\seguridad\roles\index.blade.php             135
+C:\laragon\www\cup-admision-laravel\resources\views\seguridad\usuarios\index.blade.php          150
+
+

@@ -1,6 +1,6 @@
-@extends('layouts.base')
+﻿@extends('layouts.base')
 
-@section('titulo', 'Resultados de asignación')
+@section('titulo', 'Resultados de asignaciÃ³n')
 
 @section('contenido')
 
@@ -19,11 +19,11 @@
 
 <div class="page-header d-flex justify-content-between align-items-start mb-4">
   <div>
-    <h1><i class="bi bi-diagram-3 me-2"></i>Resultados de asignación</h1>
-    <p class="page-subtitle">CU24 — Asignaciones de carrera por mérito y cupo</p>
+    <h1><i class="bi bi-diagram-3 me-2"></i>Resultados de asignaciÃ³n</h1>
+    <p class="page-subtitle">CU24 â€” Asignaciones de carrera por mÃ©rito y cupo</p>
   </div>
   <a href="{{ route('admision.preasignacion') }}" class="btn btn-outline-secondary">
-    <i class="bi bi-arrow-left me-1"></i> Pre-asignación
+    <i class="bi bi-arrow-left me-1"></i> Pre-asignaciÃ³n
   </a>
 </div>
 
@@ -31,10 +31,10 @@
   @php $s = session('stats_asignacion'); @endphp
   <div class="alert alert-cup-success">
     <i class="bi bi-check-circle me-2"></i>
-    <strong>Asignación ejecutada.</strong>
-    Aprobados: {{ $s['total_aprobados'] }} ·
-    Admitidos 1ra: {{ $s['admitidos_primera'] }} ·
-    Admitidos 2da: {{ $s['admitidos_segunda'] }} ·
+    <strong>AsignaciÃ³n ejecutada.</strong>
+    Aprobados: {{ $s['total_aprobados'] }} Â·
+    Admitidos 1ra: {{ $s['admitidos_primera'] }} Â·
+    Admitidos 2da: {{ $s['admitidos_segunda'] }} Â·
     Sin cupo: {{ $s['sin_cupo'] }}
   </div>
 @endif
@@ -75,15 +75,15 @@
       <tbody>
         @forelse($resultados as $r)
           <tr>
-            <td>{{ $r->posicion_ranking_general ?? '—' }}</td>
-            <td>{{ $r->postulante->persona->ci ?? '—' }}</td>
-            <td><strong>{{ $r->postulante->persona->nombre ?? '—' }}</strong></td>
+            <td>{{ $r->posicion_ranking_general ?? 'â€”' }}</td>
+            <td>{{ $r->postulante->persona->ci ?? 'â€”' }}</td>
+            <td><strong>{{ $r->postulante->persona->nombre ?? 'â€”' }}</strong></td>
             <td class="text-center">{{ number_format($r->promedio_final, 2) }}</td>
-            <td>{{ optional($r->carreraAsignada)->nombre ?? '—' }}</td>
+            <td>{{ optional($r->carreraAsignada)->nombre ?? 'â€”' }}</td>
             <td><span class="badge bg-{{ $badges[$r->estado_admision] ?? 'secondary' }}">{{ $labels[$r->estado_admision] ?? $r->estado_admision }}</span></td>
           </tr>
         @empty
-          <tr><td colspan="6" class="text-center py-4 text-muted">Sin resultados. Ejecutá la asignación desde Pre-asignación.</td></tr>
+          <tr><td colspan="6" class="text-center py-4 text-muted">Sin resultados. EjecutÃ¡ la asignaciÃ³n desde Pre-asignaciÃ³n.</td></tr>
         @endforelse
       </tbody>
     </table>
@@ -92,9 +92,7 @@
 </div>
 
 @if($resultados instanceof \Illuminate\Pagination\LengthAwarePaginator && $resultados->hasPages())
-  <div class="mt-3 d-flex justify-content-center">
-    {{ $resultados->links('pagination::bootstrap-5') }}
-  </div>
+  <div class="mt-3 d-flex justify-content-center">{{ $resultados->links() }}</div>
 @endif
 
 @endsection

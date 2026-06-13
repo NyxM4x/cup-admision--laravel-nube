@@ -1,4 +1,4 @@
-@extends('layouts.base')
+﻿@extends('layouts.base')
 
 @section('titulo', 'Postulantes')
 
@@ -156,8 +156,9 @@
 
 @if($postulantes->hasPages())
   <div class="mt-3 d-flex justify-content-center">
-    {{ $postulantes->links() }}
+    {{ $postulantes->links('pagination::bootstrap-5') }}
   </div>
 @endif
 
 @endsection
+

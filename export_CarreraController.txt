@@ -1,0 +1,189 @@
+﻿<?php
+
+namespace App\Http\Controllers;
+
+use App\Domain\Bitacora\Services\BitacoraLogger;
+use App\Models\Carrera;
+use App\Models\CupoCarrera;
+use App\Models\Periodo;
+use Illuminate\Http\Request;
+
+class CarreraController extends Controller
+{
+    public function index(Request $request)
+    {
+        $periodoActivo = Periodo::where('activo', true)->first();
+
+        $q = trim($request->input('q', ''));
+        $estado = $request->input('estado', 'todos'); // todos|activos|inactivos
+
+        $query = Carrera::with(['cupoActivo'])->orderBy('codigo');
+
+        if ($estado === 'activos') {
+            $query->where('activo', true);
+        } elseif ($estado === 'inactivos') {
+            $query->where('activo', false);
+        }
+
+        if ($q !== '') {
+            $query->where(function ($w) use ($q) {
+                $w->whereRaw('unaccent(codigo) ilike unaccent(?)', ["%{$q}%"])
+                  ->orWhereRaw('unaccent(nombre) ilike unaccent(?)', ["%{$q}%"]);
+            });
+        }
+
+        $carreras = $query->paginate(20)->withQueryString();
+
+        return view('carreras.index', compact('carreras', 'periodoActivo', 'q', 'estado'));
+    }
+
+    public function create()
+    {
+        $periodoActivo = Periodo::where('activo', true)->first();
+        return view('carreras.create', compact('periodoActivo'));
+    }
+
+    public function store(Request $request)
+    {
+        $request->validate([
+            'codigo'      => 'required|string|max:20|unique:carreras,codigo',
+            'nombre'      => 'required|string|max:150|unique:carreras,nombre',
+            'descripcion' => 'nullable|string',
+            'cupo_max'    => 'required|integer|min:1',
+        ]);
+
+        $periodoActivo = Periodo::where('activo', true)->first();
+
+        if (!$periodoActivo) {
+            return back()->withErrors(['general' => 'No existe un periodo activo. Crea un periodo antes de registrar carreras.'])->withInput();
+        }
+
+        try {
+            $carrera = Carrera::create([
+                'codigo'      => strtoupper($request->codigo),
+                'nombre'      => $request->nombre,
+                'descripcion' => $request->descripcion,
+                'activo'      => true,
+            ]);
+
+            // Crear el cupo asociado al periodo activo
+            CupoCarrera::create([
+                'carrera_id'        => $carrera->id,
+                'periodo_id'        => $periodoActivo->id,
+                'cupo_max'          => $request->cupo_max,
+                'monto_inscripcion' => $request->monto_inscripcion ?? 50.00,
+                'fecha_cofi'        => $request->fecha_cofi ?? null,
+            ]);
+
+            BitacoraLogger::registrar(
+                'CREAR',
+                'Carreras',
+                'Carrera creada: '.$carrera->nombre.' (codigo: '.$carrera->codigo.')'
+            );
+
+            return redirect()->route('carreras.index')
+                ->with('success', "Carrera '{$carrera->nombre}' registrada correctamente.");
+        } catch (\Throwable $e) {
+            BitacoraLogger::registrar(
+                'ERROR_CREAR',
+                'Carreras',
+                'Error al crear carrera: '.$e->getMessage()
+            );
+
+            throw $e;
+        }
+    }
+
+    public function edit(Carrera $carrera)
+    {
+        $periodoActivo = Periodo::where('activo', true)->first();
+
+        // Cupo del periodo activo para esta carrera
+        $cupoActual = null;
+        if ($periodoActivo) {
+            $cupoActual = CupoCarrera::where('carrera_id', $carrera->id)
+                ->where('periodo_id', $periodoActivo->id)
+                ->first();
+        }
+
+        return view('carreras.edit', compact('carrera', 'periodoActivo', 'cupoActual'));
+    }
+
+    public function update(Request $request, Carrera $carrera)
+    {
+        $request->validate([
+            'codigo'      => 'required|string|max:20|unique:carreras,codigo,' . $carrera->id,
+            'nombre'      => 'required|string|max:150|unique:carreras,nombre,' . $carrera->id,
+            'descripcion' => 'nullable|string',
+            'cupo_max'    => 'required|integer|min:1',
+        ]);
+
+        $periodoActivo = Periodo::where('activo', true)->first();
+
+        try {
+            $carrera->update([
+                'codigo'      => strtoupper($request->codigo),
+                'nombre'      => $request->nombre,
+                'descripcion' => $request->descripcion,
+            ]);
+
+            // Actualizar o crear el cupo del periodo activo
+            if ($periodoActivo) {
+                CupoCarrera::updateOrCreate(
+                    ['carrera_id' => $carrera->id, 'periodo_id' => $periodoActivo->id],
+                    [
+                        'cupo_max'          => $request->cupo_max,
+                        'monto_inscripcion' => $request->monto_inscripcion ?? 50.00,
+                        'fecha_cofi'        => $request->fecha_cofi ?? null,
+                    ]
+                );
+            }
+
+            BitacoraLogger::registrar(
+                'EDITAR',
+                'Carreras',
+                'Carrera editada ID='.$carrera->id.' nombre='.$carrera->nombre
+            );
+
+            return redirect()->route('carreras.index')
+                ->with('success', "Carrera '{$carrera->nombre}' actualizada correctamente.");
+        } catch (\Throwable $e) {
+            BitacoraLogger::registrar(
+                'ERROR_EDITAR',
+                'Carreras',
+                'Error al editar carrera ID='.$carrera->id.': '.$e->getMessage()
+            );
+
+            throw $e;
+        }
+    }
+
+    // Archivar carrera (inactivaciÃ³n lÃ³gica â€” NO se elimina fÃ­sicamente)
+    public function archivar(Carrera $carrera)
+    {
+        $carrera->update(['activo' => false]);
+
+        BitacoraLogger::registrar(
+            'CARRERA_ARCHIVADA',
+            'Carreras',
+            'Carrera archivada: '.$carrera->nombre.' (codigo: '.$carrera->codigo.')'
+        );
+
+        return redirect()->route('carreras.index')
+            ->with('success', "Carrera '{$carrera->nombre}' archivada correctamente.");
+    }
+
+    public function reactivar(Carrera $carrera)
+    {
+        $carrera->update(['activo' => true]);
+
+        BitacoraLogger::registrar(
+            'CARRERA_REACTIVADA',
+            'Carreras',
+            'Carrera reactivada: '.$carrera->nombre.' (codigo: '.$carrera->codigo.')'
+        );
+
+        return redirect()->route('carreras.index')
+            ->with('success', "Carrera '{$carrera->nombre}' reactivada correctamente.");
+    }
+}

@@ -1,4 +1,4 @@
-@extends('layouts.base')
+﻿@extends('layouts.base')
 
 @section('titulo', 'Bitácora del Sistema')
 
@@ -163,7 +163,7 @@
 
     @if($registros->hasPages())
       <div class="d-flex justify-content-center py-3 border-top">
-        {{ $registros->links() }}
+        {{ $registros->links('pagination::bootstrap-5') }}
       </div>
     @endif
 
@@ -181,3 +181,4 @@
   }
 </style>
 @endpush
+
