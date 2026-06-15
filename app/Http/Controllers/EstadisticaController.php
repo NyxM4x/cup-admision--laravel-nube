@@ -73,16 +73,34 @@ class EstadisticaController extends Controller
             $globalAprob = $tot ? round(ResultadoAdmision::where('periodo_id', $periodo->id)->where('promedio_final', '>=', 51)->count() * 100 / $tot, 1) : 0;
         }
 
-        $docentes = Docente::with('persona')->where('activo', true)->get()->map(function ($d) use ($periodo, $globalAvg, $globalAprob) {
-            $grupos = $periodo ? Grupo::where('periodo_id', $periodo->id)->where('docente_id', $d->id)->count() : 0;
+        $docentes = Docente::with('persona', 'profesion')
+            ->where('activo', true)
+            ->get()
+            ->map(function ($d) use ($periodo, $globalAvg, $globalAprob) {
+                // Contar grupos-turno donde el docente tiene al menos un bloque de materia.
+                // docente_id ahora vive en grupo_materias (pivot), no en grupos.
+                $grupos = 0;
+                $materiaSigla = null;
 
-            return (object) [
-                'nombre'        => $d->persona->nombre ?? ('Docente #'.$d->id),
-                'grupos'        => $grupos,
-                'promedio_ref'  => $grupos > 0 ? $globalAvg : null,   // referencial (sin notas por grupo aún)
-                'pct_aprobados' => $grupos > 0 ? $globalAprob : null,
-            ];
-        });
+                if ($periodo) {
+                    $grupos = Grupo::where('periodo_id', $periodo->id)
+                        ->whereHas('grupoMaterias', fn ($q) => $q->where('docente_id', $d->id))
+                        ->count();
+
+                    // Materia (sigla) que dicta este docente
+                    $materiaSigla = $d->materia ?? 'Sin asignar';
+                }
+
+                return (object) [
+                    'id'            => $d->id,
+                    'nombre'        => $d->persona->nombre ?? ('Docente #' . $d->id),
+                    'materia'       => $materiaSigla,
+                    'profesion'     => $d->profesion->nombre ?? '—',
+                    'grupos'        => $grupos,
+                    'promedio_ref'  => $grupos > 0 ? $globalAvg : null,   // referencial (sin notas por grupo aún)
+                    'pct_aprobados' => $grupos > 0 ? $globalAprob : null,
+                ];
+            });
 
         return view('estadisticas.docentes', compact('periodo', 'periodos', 'docentes'));
     }
@@ -95,9 +113,15 @@ class EstadisticaController extends Controller
 
         $grupos = collect();
         if ($periodo) {
-            $grupos = Grupo::with(['materia', 'docente.persona', 'aula', 'horario'])
+            // Un grupo es un TURNO completo; materia y docente viven en grupo_materias.
+            $grupos = Grupo::with([
+                    'grupoMaterias.materia',
+                    'grupoMaterias.docente.persona',
+                    'aula',
+                    'horario',
+                ])
                 ->where('periodo_id', $periodo->id)
-                ->orderBy('materia_id')->orderBy('codigo')
+                ->orderBy('codigo')
                 ->get();
         }
 

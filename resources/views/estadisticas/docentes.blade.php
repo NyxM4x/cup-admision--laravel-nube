@@ -21,17 +21,19 @@
   <div class="panel-cup-body p-0">
     <div class="table-responsive">
     <table class="table-cup table mb-0">
-      <thead><tr><th>Docente</th><th class="text-center">Grupos asignados</th><th class="text-center">Promedio ref.</th><th class="text-center">% aprobados ref.</th></tr></thead>
+      <thead><tr><th>Docente</th><th>Materia</th><th>Profesión</th><th class="text-center">Grupos asignados</th><th class="text-center">Promedio ref.</th><th class="text-center">% aprobados ref.</th></tr></thead>
       <tbody>
         @forelse($docentes as $d)
           <tr>
             <td><strong>{{ $d->nombre }}</strong></td>
+            <td>{{ $d->materia ?? '—' }}</td>
+            <td>{{ $d->profesion ?? '—' }}</td>
             <td class="text-center"><span class="badge-cup badge-modulo">{{ $d->grupos }}</span></td>
             <td class="text-center">{{ $d->promedio_ref !== null ? number_format($d->promedio_ref, 2) : '—' }}</td>
             <td class="text-center">{{ $d->pct_aprobados !== null ? $d->pct_aprobados.'%' : '—' }}</td>
           </tr>
         @empty
-          <tr><td colspan="4" class="text-center py-4 text-muted">No hay docentes activos.</td></tr>
+          <tr><td colspan="6" class="text-center py-4 text-muted">No hay docentes activos.</td></tr>
         @endforelse
       </tbody>
     </table>
