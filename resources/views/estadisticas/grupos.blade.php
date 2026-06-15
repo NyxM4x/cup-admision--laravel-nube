@@ -16,21 +16,29 @@
   <div class="panel-cup-body p-0">
     <div class="table-responsive">
     <table class="table-cup table mb-0">
-      <thead><tr><th>Código</th><th>Materia</th><th>Docente</th><th>Aula</th><th>Horario</th><th class="text-center">Ocupación</th></tr></thead>
+      <thead><tr><th>Código</th><th>Turno</th><th>Materias y docentes</th><th>Aula</th><th class="text-center">Ocupación</th></tr></thead>
       <tbody>
         @forelse($grupos as $g)
           <tr>
             <td><span class="badge-cup badge-modulo">{{ $g->codigo }}</span></td>
-            <td>{{ $g->materia->sigla ?? '—' }}</td>
-            <td>{{ optional(optional($g->docente)->persona)->nombre ?? '—' }}</td>
+            <td>{{ optional($g->horario)->turno ?? optional($g->horario)->codigo ?? '—' }}</td>
+            <td>
+              @forelse($g->grupoMaterias as $bloque)
+                <div class="small">
+                  <strong>{{ optional($bloque->materia)->sigla ?? '—' }}</strong>
+                  — {{ optional(optional($bloque->docente)->persona)->nombre ?? 'Sin docente' }}
+                </div>
+              @empty
+                <span class="text-muted">Sin materias configuradas</span>
+              @endforelse
+            </td>
             <td>{{ optional($g->aula)->codigo ?? '—' }}</td>
-            <td>{{ optional($g->horario)->codigo ?? '—' }}</td>
             <td class="text-center">
               <span class="badge {{ $g->inscritos_actuales >= $g->cupo_max ? 'bg-danger' : 'bg-secondary' }}">{{ $g->inscritos_actuales }} / {{ $g->cupo_max }}</span>
             </td>
           </tr>
         @empty
-          <tr><td colspan="6" class="text-center py-4 text-muted">No hay grupos en este periodo. Generalos en Gestión Académica → Grupos.</td></tr>
+          <tr><td colspan="5" class="text-center py-4 text-muted">No hay grupos en este periodo. Generalos en Gestión Académica → Grupos.</td></tr>
         @endforelse
       </tbody>
     </table>
