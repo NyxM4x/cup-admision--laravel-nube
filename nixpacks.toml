@@ -1,2 +1,10 @@
 [phases.setup]
 nixPkgs = ["php83", "php83Extensions.gd", "php83Extensions.zip", "php83Extensions.pdo_pgsql"]
+
+[phases.build]
+cmds = [
+  "composer install --no-dev --optimize-autoloader"
+]
+
+[start]
+cmd = "php artisan config:clear && php artisan config:cache && php artisan route:cache && php artisan view:cache && php artisan migrate --force && php artisan db:seed --force && php artisan serve --host=0.0.0.0 --port=$PORT"
