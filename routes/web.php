@@ -8,6 +8,26 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\DashboardAdminController;
 use App\Http\Controllers\GrupoPostulanteController;
 use App\Http\Controllers\NotaController;
+use App\Http\Controllers\AsistenteIAController;
+
+// RUTA TEMPORAL DE DIAGNÓSTICO — ELIMINAR DESPUÉS DE USAR
+Route::get('/debug-db', function () {
+    return response()->json([
+        'db_connected'   => true,
+        'total_usuarios' => \App\Models\User::count(),
+        'usuarios'       => \App\Models\User::select('id', 'email', 'activo', 'rol_id', 'bloqueado_hasta', 'failed_logins')->get(),
+        'database_url'   => str(config('database.connections.pgsql.host'))->mask('*', 3),
+        'db_database'    => config('database.connections.pgsql.database'),
+        'migrations'     => \Illuminate\Support\Facades\DB::select("SELECT * FROM migrations ORDER BY id DESC LIMIT 5"),
+    ]);
+})->name('debug.db');
+// ══════════════════════════════════════════════
+// ASISTENTE IA (solo Administrador, Coordinador CUP, Auditor)
+// ══════════════════════════════════════════════
+Route::middleware('auth')
+    ->post('/asistente-ia/consultar', [AsistenteIAController::class, 'consultar'])
+    ->name('asistente-ia.consultar');
+
 // ══════════════════════════════════════════════
 // PÁGINA DE INICIO
 // ══════════════════════════════════════════════
