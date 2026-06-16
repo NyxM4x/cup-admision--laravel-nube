@@ -83,7 +83,7 @@ class SeguridadSeeder extends Seeder
             ['email' => 'admin@cup.uagrm.bo'],
             [
                 'name'     => 'Ariany Claure',
-                'password' => Hash::make('admin123'),
+                'password' => Hash::make('Admin123@'),
                 'activo'   => true,
                 'rol_id'   => $administrador->id,
             ]
