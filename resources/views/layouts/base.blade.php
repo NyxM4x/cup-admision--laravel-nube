@@ -789,7 +789,7 @@
 
   if (SR) {
     recognition = new SR();
-    recognition.lang           = 'es-BO';
+    recognition.lang           = 'es-ES';
     recognition.interimResults = true;
     recognition.continuous     = false;
     recognition.maxAlternatives = 1;

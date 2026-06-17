@@ -26,8 +26,10 @@ class ReporteController extends Controller
     public function index()
     {
         $reportes = self::REPORTES;
+        $periodos = Periodo::orderBy('id')->get();
+        $periodoActivo = Periodo::where('activo', true)->orderBy('id', 'desc')->value('id');
 
-        return view('reportes.index', compact('reportes'));
+        return view('reportes.index', compact('reportes', 'periodos', 'periodoActivo'));
     }
 
     public function html(string $tipo)
@@ -61,7 +63,10 @@ class ReporteController extends Controller
     {
         abort_unless(array_key_exists($tipo, self::REPORTES), 404);
 
-        $periodo = Periodo::where('activo', true)->orderBy('id', 'desc')->first();
+        $periodoId = request('periodo_id');
+        $periodo = $periodoId
+            ? Periodo::findOrFail($periodoId)
+            : Periodo::where('activo', true)->orderBy('id', 'desc')->first();
         $titulo = self::REPORTES[$tipo];
         $encabezados = [];
         $rows = [];
