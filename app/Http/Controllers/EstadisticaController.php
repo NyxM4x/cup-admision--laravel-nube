@@ -23,11 +23,11 @@ class EstadisticaController extends Controller
     // CU27 — Dashboard con gráficos (Chart.js)
     public function dashboard(Request $request)
     {
-        $periodo = $this->periodo($request);
+        $periodo  = $this->periodo($request);
         $periodos = Periodo::orderBy('id', 'desc')->get();
 
-        $porCarrera = collect();
-        $aprobReprob = ['aprobados' => 0, 'reprobados' => 0];
+        $porCarrera    = collect();
+        $aprobReprob   = ['aprobados' => 0, 'reprobados' => 0];
         $promedioMateria = collect();
 
         if ($periodo) {
@@ -51,54 +51,89 @@ class EstadisticaController extends Controller
                 'reprobados' => ResultadoAdmision::where('periodo_id', $periodo->id)->where('promedio_final', '<', 51)->count(),
             ];
 
-            // Promedio por materia (DEMO: sin notas por materia aún — depende de CU21-23)
-            $globalAvg = (float) ResultadoAdmision::where('periodo_id', $periodo->id)->avg('promedio_final');
-            $promedioMateria = Materia::where('activo', true)->orderBy('sigla')->get()
-                ->mapWithKeys(fn ($m) => [$m->nombre => round(max(0, min(100, $globalAvg + (($m->id % 5) - 2) * 2.5)), 2)]);
+            // Promedio real por materia desde la tabla notas
+            $promedioMateria = DB::table('notas as n')
+                ->join('grupo_materias as gm', 'gm.id', '=', 'n.grupo_materia_id')
+                ->join('grupos as g', 'g.id', '=', 'gm.grupo_id')
+                ->join('materias as m', 'm.id', '=', 'gm.materia_id')
+                ->where('g.periodo_id', $periodo->id)
+                ->whereNotNull('n.nota_final')
+                ->groupBy('m.nombre', 'm.sigla')
+                ->selectRaw('m.nombre, m.sigla, ROUND(AVG(n.nota_final)::numeric, 2) as promedio')
+                ->orderBy('m.sigla')
+                ->get()
+                ->mapWithKeys(fn ($r) => [$r->nombre => (float) $r->promedio]);
+
+            // Si aún no hay notas, mostrar promedio global referencial
+            if ($promedioMateria->isEmpty()) {
+                $globalAvg = (float) ResultadoAdmision::where('periodo_id', $periodo->id)->avg('promedio_final');
+                $promedioMateria = Materia::where('activo', true)->orderBy('sigla')->get()
+                    ->mapWithKeys(fn ($m) => [$m->nombre => round($globalAvg, 2)]);
+            }
         }
 
         return view('estadisticas.dashboard', compact('periodo', 'periodos', 'porCarrera', 'aprobReprob', 'promedioMateria'));
     }
 
-    // CU27 — Estadísticas por docente
+    // CU27 — Estadísticas por docente (satisfacción = % aprobados en sus grupos)
     public function porDocente(Request $request)
     {
-        $periodo = $this->periodo($request);
+        $periodo  = $this->periodo($request);
         $periodos = Periodo::orderBy('id', 'desc')->get();
 
-        $globalAvg = $periodo ? round((float) ResultadoAdmision::where('periodo_id', $periodo->id)->avg('promedio_final'), 2) : 0;
-        $globalAprob = 0;
+        // Estadísticas reales por docente desde tabla notas
+        $statsDocente = collect();
         if ($periodo) {
-            $tot = ResultadoAdmision::where('periodo_id', $periodo->id)->count();
-            $globalAprob = $tot ? round(ResultadoAdmision::where('periodo_id', $periodo->id)->where('promedio_final', '>=', 51)->count() * 100 / $tot, 1) : 0;
+            $statsDocente = DB::table('notas as n')
+                ->join('grupo_materias as gm', 'gm.id', '=', 'n.grupo_materia_id')
+                ->join('grupos as g', 'g.id', '=', 'gm.grupo_id')
+                ->where('g.periodo_id', $periodo->id)
+                ->whereNotNull('gm.docente_id')
+                ->whereNotNull('n.nota_final')
+                ->groupBy('gm.docente_id')
+                ->selectRaw('
+                    gm.docente_id,
+                    COUNT(*) as total_notas,
+                    ROUND(AVG(n.nota_final)::numeric, 2) as promedio,
+                    SUM(CASE WHEN n.nota_final >= 51 THEN 1 ELSE 0 END) as aprobados
+                ')
+                ->get()
+                ->keyBy('docente_id');
         }
 
         $docentes = Docente::with('persona', 'profesion')
             ->where('activo', true)
             ->get()
-            ->map(function ($d) use ($periodo, $globalAvg, $globalAprob) {
-                // Contar grupos-turno donde el docente tiene al menos un bloque de materia.
-                // docente_id ahora vive en grupo_materias (pivot), no en grupos.
+            ->map(function ($d) use ($periodo, $statsDocente) {
                 $grupos = 0;
-                $materiaSigla = null;
 
                 if ($periodo) {
                     $grupos = Grupo::where('periodo_id', $periodo->id)
                         ->whereHas('grupoMaterias', fn ($q) => $q->where('docente_id', $d->id))
                         ->count();
+                }
 
-                    // Materia (sigla) que dicta este docente
-                    $materiaSigla = $d->materia ?? 'Sin asignar';
+                $stats = $statsDocente->get($d->id);
+                $promedio = null;
+                $pctAprobados = null;
+                $satisfaccion = null;
+
+                if ($stats && $stats->total_notas > 0) {
+                    $promedio = (float) $stats->promedio;
+                    $pctAprobados = round($stats->aprobados * 100 / $stats->total_notas, 1);
+                    // Satisfacción = porcentaje de aprobados (100% = excelente, 0% = pésimo)
+                    $satisfaccion = $pctAprobados;
                 }
 
                 return (object) [
                     'id'            => $d->id,
                     'nombre'        => $d->persona->nombre ?? ('Docente #' . $d->id),
-                    'materia'       => $materiaSigla,
+                    'materia'       => $d->materia ?? 'Sin asignar',
                     'profesion'     => $d->profesion->nombre ?? '—',
                     'grupos'        => $grupos,
-                    'promedio_ref'  => $grupos > 0 ? $globalAvg : null,   // referencial (sin notas por grupo aún)
-                    'pct_aprobados' => $grupos > 0 ? $globalAprob : null,
+                    'promedio_ref'  => $promedio,
+                    'pct_aprobados' => $pctAprobados,
+                    'satisfaccion'  => $satisfaccion,
                 ];
             });
 
@@ -108,12 +143,11 @@ class EstadisticaController extends Controller
     // CU27 — Estadísticas por grupo
     public function porGrupo(Request $request)
     {
-        $periodo = $this->periodo($request);
+        $periodo  = $this->periodo($request);
         $periodos = Periodo::orderBy('id', 'desc')->get();
 
         $grupos = collect();
         if ($periodo) {
-            // Un grupo es un TURNO completo; materia y docente viven en grupo_materias.
             $grupos = Grupo::with([
                     'grupoMaterias.materia',
                     'grupoMaterias.docente.persona',
@@ -122,7 +156,27 @@ class EstadisticaController extends Controller
                 ])
                 ->where('periodo_id', $periodo->id)
                 ->orderBy('codigo')
-                ->get();
+                ->get()
+                ->map(function ($g) use ($periodo) {
+                    // Calcular promedio y % aprobados del grupo desde notas
+                    $stats = DB::table('notas as n')
+                        ->join('grupo_materias as gm', 'gm.id', '=', 'n.grupo_materia_id')
+                        ->where('gm.grupo_id', $g->id)
+                        ->whereNotNull('n.nota_final')
+                        ->selectRaw('
+                            COUNT(DISTINCT n.postulante_id) as total_postulantes,
+                            ROUND(AVG(n.nota_final)::numeric, 2) as promedio,
+                            SUM(CASE WHEN n.nota_final >= 51 THEN 1 ELSE 0 END) as aprobados_notas
+                        ')
+                        ->first();
+
+                    $g->stats_promedio = $stats ? (float) $stats->promedio : null;
+                    $g->stats_pct_aprobados = ($stats && $stats->total_postulantes > 0)
+                        ? round($stats->aprobados_notas * 100 / ($stats->total_postulantes * 4), 1)
+                        : null;
+
+                    return $g;
+                });
         }
 
         return view('estadisticas.grupos', compact('periodo', 'periodos', 'grupos'));

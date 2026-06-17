@@ -60,7 +60,8 @@ class DocenteController extends Controller
             'telefono'            => 'nullable|string|max:20',
             'correo'              => 'nullable|email|max:150|unique:personas,correo',
             'profesion_id'        => 'nullable|exists:profesiones,id',
-            'materia'             => 'required|exists:materias,sigla',   // ← NUEVO obligatorio
+            'materias'            => 'required|array|min:1|max:4',
+            'materias.*'          => 'exists:materias,sigla',
             'anios_experiencia'   => 'required|integer|min:0|max:50',
             'certif_docente'      => 'nullable|file|mimes:pdf,jpg,png|max:5120',
             'certif_profesional'  => 'nullable|file|mimes:pdf,jpg,png|max:5120',
@@ -88,19 +89,25 @@ class DocenteController extends Controller
                 ->store('docentes/certificados', 'public');
         }
 
+        $materias = array_map('strtoupper', $request->materias);
+
         $docente = Docente::create([
-            'persona_id'        => $persona->id,
-            'profesion_id'      => $request->profesion_id,
-            'materia'           => strtoupper($request->materia),   // ← NUEVO
-            'anios_experiencia' => $request->anios_experiencia,
-            'certif_docente'    => $pathCertDocente,
-            'certif_profesional'=> $pathCertProfesional,
-            'activo'            => true,
+            'persona_id'         => $persona->id,
+            'profesion_id'       => $request->profesion_id,
+            'materia'            => $materias[0],   // primera materia (compat. GrupoController)
+            'anios_experiencia'  => $request->anios_experiencia,
+            'certif_docente'     => $pathCertDocente,
+            'certif_profesional' => $pathCertProfesional,
+            'activo'             => true,
         ]);
+
+        foreach ($materias as $sigla) {
+            $docente->docenteMaterias()->firstOrCreate(['materia_sigla' => $sigla]);
+        }
 
         BitacoraLogger::registrar(
             'CREAR', 'Docentes',
-            'Docente creado: '.$persona->nombre.' CI='.$persona->ci.' materia='.$docente->materia
+            'Docente creado: '.$persona->nombre.' CI='.$persona->ci.' materias='.implode(',', $materias)
         );
 
         return redirect()->route('docentes.index')
@@ -117,18 +124,19 @@ class DocenteController extends Controller
     public function update(Request $request, Docente $docente)
     {
         $request->validate([
-            'ci'               => 'required|string|max:20|unique:personas,ci,'.$docente->persona_id,
-            'nombre'           => 'required|string|max:200',
-            'fecha_nacimiento' => 'nullable|date',
-            'sexo'             => 'nullable|in:M,F',
-            'direccion'        => 'nullable|string|max:255',
-            'telefono'         => 'nullable|string|max:20',
-            'correo'           => 'nullable|email|max:150|unique:personas,correo,'.$docente->persona_id,
-            'profesion_id'     => 'nullable|exists:profesiones,id',
-            'materia'          => 'required|exists:materias,sigla',   // ← NUEVO obligatorio
-            'anios_experiencia'=> 'required|integer|min:0|max:50',
-            'certif_docente'   => 'nullable|file|mimes:pdf,jpg,png|max:5120',
-            'certif_profesional'=> 'nullable|file|mimes:pdf,jpg,png|max:5120',
+            'ci'                  => 'required|string|max:20|unique:personas,ci,'.$docente->persona_id,
+            'nombre'              => 'required|string|max:200',
+            'fecha_nacimiento'    => 'nullable|date',
+            'sexo'                => 'nullable|in:M,F',
+            'direccion'           => 'nullable|string|max:255',
+            'telefono'            => 'nullable|string|max:20',
+            'correo'              => 'nullable|email|max:150|unique:personas,correo,'.$docente->persona_id,
+            'profesion_id'        => 'nullable|exists:profesiones,id',
+            'materias'            => 'required|array|min:1|max:4',
+            'materias.*'          => 'exists:materias,sigla',
+            'anios_experiencia'   => 'required|integer|min:0|max:50',
+            'certif_docente'      => 'nullable|file|mimes:pdf,jpg,png|max:5120',
+            'certif_profesional'  => 'nullable|file|mimes:pdf,jpg,png|max:5120',
         ]);
 
         $docente->persona->update([
@@ -150,17 +158,25 @@ class DocenteController extends Controller
             $docente->certif_profesional = $request->file('certif_profesional')->store('docentes/certificados', 'public');
         }
 
+        $materias = array_map('strtoupper', $request->materias);
+
         $docente->update([
-            'profesion_id'      => $request->profesion_id,
-            'materia'           => strtoupper($request->materia),   // ← NUEVO
-            'anios_experiencia' => $request->anios_experiencia,
-            'certif_docente'    => $docente->certif_docente,
-            'certif_profesional'=> $docente->certif_profesional,
+            'profesion_id'       => $request->profesion_id,
+            'materia'            => $materias[0],   // primera materia (compat. GrupoController)
+            'anios_experiencia'  => $request->anios_experiencia,
+            'certif_docente'     => $docente->certif_docente,
+            'certif_profesional' => $docente->certif_profesional,
         ]);
+
+        // Sincronizar tabla docente_materias
+        $docente->docenteMaterias()->whereNotIn('materia_sigla', $materias)->delete();
+        foreach ($materias as $sigla) {
+            $docente->docenteMaterias()->firstOrCreate(['materia_sigla' => $sigla]);
+        }
 
         BitacoraLogger::registrar(
             'EDITAR', 'Docentes',
-            'Docente editado ID='.$docente->id.' materia='.$docente->materia
+            'Docente editado ID='.$docente->id.' materias='.implode(',', $materias)
         );
 
         return redirect()->route('docentes.index')

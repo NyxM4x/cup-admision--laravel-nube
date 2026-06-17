@@ -672,5 +672,288 @@
 <x-modal-confirmar />
 
 @stack('scripts')
+
+{{-- ═══════════════════════════════════════════ --}}
+{{-- ASISTENTE IA FLOTANTE                        --}}
+{{-- Visible solo para: Administrador, Coordinador CUP, Auditor --}}
+{{-- ═══════════════════════════════════════════ --}}
+@auth
+@php
+  $rolIA = strtolower(Auth::user()->rol?->nombre ?? '');
+  $puedeUsarIA = in_array($rolIA, ['administrador', 'coordinador cup', 'auditor']);
+@endphp
+@if($puedeUsarIA)
+
+<style>
+#ia-widget{position:fixed;bottom:24px;right:24px;z-index:9990;font-family:inherit}
+.ia-fab{width:52px;height:52px;border-radius:50%;background:var(--cup-primary-light);color:#fff;border:none;font-size:1.35rem;cursor:pointer;box-shadow:0 4px 18px rgba(0,0,0,.28);display:flex;align-items:center;justify-content:center;transition:background .2s,transform .2s;outline:none}
+.ia-fab:hover{background:var(--cup-primary);transform:scale(1.08)}
+.ia-fab.open{background:var(--cup-primary)}
+.ia-panel{position:absolute;bottom:62px;right:0;width:350px;max-width:calc(100vw - 40px);background:#fff;border-radius:16px;box-shadow:0 8px 36px rgba(0,0,0,.18);display:flex;flex-direction:column;overflow:hidden;border:1px solid var(--cup-border);animation:ia-slideup .2s ease}
+@keyframes ia-slideup{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+.ia-header{background:var(--cup-primary);color:#fff;padding:11px 16px;display:flex;align-items:center;justify-content:space-between;font-weight:600;font-size:.9rem;gap:8px}
+.ia-header-title{display:flex;align-items:center;gap:8px}
+.ia-close{background:none;border:none;color:rgba(255,255,255,.8);font-size:1.1rem;cursor:pointer;padding:0;line-height:1;transition:color .15s}
+.ia-close:hover{color:#fff}
+.ia-messages{flex:1;overflow-y:auto;padding:14px 12px;display:flex;flex-direction:column;gap:8px;min-height:180px;max-height:300px;scroll-behavior:smooth}
+.ia-msg{max-width:88%;padding:8px 13px;border-radius:14px;font-size:.84rem;line-height:1.55;word-break:break-word}
+.ia-msg.user{background:var(--cup-primary-light);color:#fff;align-self:flex-end;border-bottom-right-radius:4px}
+.ia-msg.bot{background:#f0f4f9;color:var(--cup-text);align-self:flex-start;border-bottom-left-radius:4px;white-space:pre-wrap}
+.ia-msg.error{background:#fee2e2;color:#991b1b;align-self:flex-start}
+.ia-typing{align-self:flex-start;display:flex;gap:5px;padding:10px 14px;background:#f0f4f9;border-radius:14px;border-bottom-left-radius:4px}
+.ia-typing span{width:7px;height:7px;background:#94a3b8;border-radius:50%;animation:ia-bounce 1.1s ease-in-out infinite}
+.ia-typing span:nth-child(2){animation-delay:.18s}
+.ia-typing span:nth-child(3){animation-delay:.36s}
+@keyframes ia-bounce{0%,80%,100%{transform:translateY(0)}40%{transform:translateY(-7px)}}
+.ia-footer{display:flex;gap:6px;padding:9px 10px;border-top:1px solid var(--cup-border);background:#fafafa;align-items:center}
+.ia-input{flex:1;border:1px solid var(--cup-border);border-radius:20px;padding:7px 14px;font-size:.84rem;outline:none;background:#fff;color:var(--cup-text);transition:border .15s}
+.ia-input:focus{border-color:var(--cup-accent);box-shadow:0 0 0 3px rgba(44,123,229,.12)}
+.ia-btn{width:34px;height:34px;border-radius:50%;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:.95rem;transition:background .15s,transform .15s;flex-shrink:0;outline:none}
+.ia-btn:active{transform:scale(.92)}
+.ia-btn.mic{background:#e5e7eb;color:var(--cup-muted)}
+.ia-btn.mic.recording{background:#dc2626;color:#fff;animation:ia-pulse 1.2s ease infinite}
+.ia-btn.send{background:var(--cup-primary-light);color:#fff}
+.ia-btn.send:hover{background:var(--cup-primary)}
+.ia-btn:disabled{opacity:.5;cursor:not-allowed}
+@keyframes ia-pulse{0%,100%{box-shadow:0 0 0 0 rgba(220,38,38,.4)}60%{box-shadow:0 0 0 8px rgba(220,38,38,0)}}
+.ia-badge{font-size:.65rem;background:rgba(255,255,255,.2);padding:1px 6px;border-radius:8px;letter-spacing:.3px}
+</style>
+
+<div id="ia-widget">
+  <button id="ia-fab" class="ia-fab" title="Asistente IA CUP" aria-label="Abrir asistente IA">
+    <i class="bi bi-stars"></i>
+  </button>
+
+  <div id="ia-panel" hidden>
+    <div class="ia-header">
+      <span class="ia-header-title">
+        <i class="bi bi-stars"></i>
+        Asistente CUP
+        <span class="ia-badge">IA</span>
+      </span>
+      <button id="ia-close" class="ia-close" aria-label="Cerrar"><i class="bi bi-x-lg"></i></button>
+    </div>
+
+    <div id="ia-msgs" class="ia-messages" role="log" aria-live="polite">
+      <div class="ia-msg bot">Hola. Soy el asistente IA del sistema CUP-FICCT.<br>Puedes preguntarme sobre postulantes, grupos, docentes, estadísticas o resultados de admisión.<br><br>Escribe tu consulta o usa el micrófono.</div>
+    </div>
+
+    <div class="ia-footer">
+      <input id="ia-input" class="ia-input" type="text" placeholder="Consulta o dicta…" maxlength="500" autocomplete="off" aria-label="Consulta al asistente">
+      <button id="ia-mic" class="ia-btn mic" title="Dictado por voz" aria-label="Activar micrófono"><i class="bi bi-mic-fill"></i></button>
+      <button id="ia-send" class="ia-btn send" title="Enviar" aria-label="Enviar consulta"><i class="bi bi-send-fill"></i></button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  const fab   = document.getElementById('ia-fab');
+  const panel = document.getElementById('ia-panel');
+  const close = document.getElementById('ia-close');
+  const input = document.getElementById('ia-input');
+  const send  = document.getElementById('ia-send');
+  const mic   = document.getElementById('ia-mic');
+  const msgs  = document.getElementById('ia-msgs');
+  const CSRF  = document.querySelector('meta[name="csrf-token"]')?.content ?? '';
+
+  // ── Toggle panel ───────────────────────────────────────────────
+  fab.addEventListener('click', () => {
+    const abierto = !panel.hidden;
+    panel.hidden = abierto;
+    fab.classList.toggle('open', !abierto);
+    fab.setAttribute('aria-expanded', String(!abierto));
+    if (!abierto) { input.focus(); }
+  });
+
+  close.addEventListener('click', () => {
+    panel.hidden = true;
+    fab.classList.remove('open');
+    fab.setAttribute('aria-expanded', 'false');
+  });
+
+  // Cerrar con Escape
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && !panel.hidden) {
+      panel.hidden = true;
+      fab.classList.remove('open');
+    }
+  });
+
+  // ── Speech Recognition (nativo) ────────────────────────────────
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  let recognition = null;
+  let grabando    = false;
+
+  if (SR) {
+    recognition = new SR();
+    recognition.lang           = 'es-BO';
+    recognition.interimResults = true;
+    recognition.continuous     = false;
+    recognition.maxAlternatives = 1;
+
+    recognition.onresult = ({ results }) => {
+      const segmentos  = Array.from(results);
+      const raw        = segmentos.map(r => r[0].transcript).join('');
+      const esFinal    = segmentos.every(r => r.isFinal);
+
+      if (esFinal) {
+        // Limpiar puntuación automática del navegador y asegurar que sea pregunta
+        let limpio = raw
+          .trim()
+          .replace(/^[¿¡\s]+/, '')          // quitar ¿ o ¡ del inicio
+          .replace(/[.,;:!?¿¡\s]+$/, '')    // quitar puntuación al final
+          .trim();
+
+        // Normalizar transcripciones erróneas del reconocedor de voz en español:
+        // "CI" se escucha como "chi", "ce i", "si" (cuando va seguido de números)
+        limpio = limpio
+          .replace(/\bchi\s+(\d)/gi,    'carnet $1')  // "chi 10000001" → "carnet 10000001"
+          .replace(/\bchi(\d)/gi,        'carnet $1')  // "chi10000001"  → "carnet 10000001"
+          .replace(/\bce[- ]?[ií]\b/gi, 'carnet')     // "ce i" / "ce-i" → "carnet"
+          .replace(/\bce[- ]?i\s+(\d)/gi,'carnet $1') // "ce i 10000001" → "carnet 10000001"
+          // Alias verbales: "el número" / "número de carnet" antes de dígitos
+          .replace(/n[uú]mero\s+de\s+carnet\s*/gi, 'carnet ')
+          .replace(/n[uú]mero\s+carnet\s*/gi,       'carnet ');
+
+        input.value = limpio ? limpio + '?' : '';
+      } else {
+        // Resultado intermedio: mostrar en tiempo real sin modificar
+        input.value = raw;
+      }
+    };
+
+    recognition.onend = () => {
+      grabando = false;
+      mic.classList.remove('recording');
+      mic.innerHTML = '<i class="bi bi-mic-fill"></i>';
+      mic.title = 'Dictado por voz';
+      // Pequeño delay para que onresult termine de escribir el valor final
+      setTimeout(() => { if (input.value.trim()) enviar(); }, 80);
+    };
+
+    recognition.onerror = (e) => {
+      grabando = false;
+      mic.classList.remove('recording');
+      mic.innerHTML = '<i class="bi bi-mic-fill"></i>';
+      mic.title = 'Dictado por voz';
+
+      const mensajes = {
+        'not-allowed'       : '⚠️ Micrófono bloqueado. El dictado por voz requiere HTTPS. En desarrollo puedes escribir tu consulta en el cuadro de texto.',
+        'service-not-allowed': '⚠️ El navegador no permite el micrófono en sitios HTTP. Usa el cuadro de texto para escribir tu consulta.',
+        'network'           : 'Error de red con el servicio de voz. Escribe tu consulta en el cuadro de texto.',
+        'audio-capture'     : 'No se detectó micrófono en este dispositivo.',
+        'aborted'           : null, // cancelado por el usuario, no mostrar nada
+        'no-speech'         : null, // silencio, no mostrar nada
+      };
+
+      const msg = mensajes[e.error];
+      if (msg) agregarMsg(msg, 'error');
+      else if (!(e.error in mensajes)) {
+        agregarMsg('Error de micrófono (' + e.error + '). Escribe tu consulta en el cuadro de texto.', 'error');
+      }
+    };
+  } else {
+    mic.hidden = true; // navegador sin soporte
+  }
+
+  // Aviso proactivo si el sitio corre sobre HTTP (mic no funcionará en Chrome/Edge)
+  const esHTTP = location.protocol === 'http:' && location.hostname !== 'localhost' && location.hostname !== '127.0.0.1';
+  if (esHTTP && recognition) {
+    mic.title = 'El dictado por voz requiere HTTPS. Escribe tu consulta en el cuadro de texto.';
+    mic.style.opacity = '0.45';
+    mic.style.cursor  = 'not-allowed';
+    mic.addEventListener('click', (e) => {
+      e.stopImmediatePropagation();
+      agregarMsg('⚠️ El dictado por voz requiere HTTPS. En desarrollo, escribe tu consulta directamente en el cuadro de texto.', 'error');
+    }, true);
+  }
+
+  if (!esHTTP) {
+    mic.addEventListener('click', () => {
+      if (!recognition) return;
+      if (grabando) {
+        recognition.stop();
+      } else {
+        input.value = '';
+        grabando = true;
+        mic.classList.add('recording');
+        mic.innerHTML = '<i class="bi bi-mic-mute-fill"></i>';
+        mic.title = 'Grabando… (clic para detener)';
+        recognition.start();
+      }
+    });
+  }
+
+  // ── Enviar consulta ────────────────────────────────────────────
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); enviar(); }
+  });
+  send.addEventListener('click', enviar);
+
+  function agregarMsg(texto, tipo) {
+    const div = document.createElement('div');
+    div.className = 'ia-msg ' + tipo;
+    div.textContent = texto;
+    msgs.appendChild(div);
+    msgs.scrollTop = msgs.scrollHeight;
+    return div;
+  }
+
+  function mostrarTyping() {
+    const div = document.createElement('div');
+    div.className = 'ia-typing';
+    div.innerHTML = '<span></span><span></span><span></span>';
+    msgs.appendChild(div);
+    msgs.scrollTop = msgs.scrollHeight;
+    return div;
+  }
+
+  async function enviar() {
+    const texto = input.value.trim();
+    if (!texto || send.disabled) return;
+
+    agregarMsg(texto, 'user');
+    input.value = '';
+    send.disabled = true;
+    mic.disabled  = true;
+
+    const typing = mostrarTyping();
+
+    try {
+      const res = await fetch('{{ route("asistente-ia.consultar") }}', {
+        method : 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRF-TOKEN': CSRF,
+          'Accept'      : 'application/json',
+        },
+        body: JSON.stringify({ mensaje: texto }),
+      });
+
+      const data = await res.json();
+      typing.remove();
+
+      if (res.ok) {
+        agregarMsg(data.respuesta ?? 'Sin respuesta.', 'bot');
+      } else {
+        agregarMsg(data.error ?? 'Error al procesar la consulta.', 'error');
+      }
+    } catch (_) {
+      typing.remove();
+      agregarMsg('Error de red. Verifica tu conexión e inténtalo de nuevo.', 'error');
+    } finally {
+      send.disabled = false;
+      mic.disabled  = false;
+      input.focus();
+    }
+  }
+})();
+</script>
+
+@endif
+@endauth
 </body>
 </html>

@@ -8,7 +8,7 @@ class Profesion extends Model
 {
     protected $table = 'profesiones';
 
-    protected $fillable = ['nombre', 'nivel_jerarquico'];
+    protected $fillable = ['nombre', 'nivel_jerarquico', 'materia_sigla'];
 
     public function docentes()
     {

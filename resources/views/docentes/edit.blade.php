@@ -77,35 +77,49 @@
         <i class="bi bi-mortarboard me-2"></i>Datos Académicos
       </h5>
 
+      @php
+        $materiasActuales = old('materias',
+          $docente->docenteMaterias->count() > 0
+            ? $docente->docenteMaterias->pluck('materia_sigla')->toArray()
+            : ($docente->materia ? [$docente->materia] : [])
+        );
+      @endphp
+
       <div class="row g-3 mb-3">
         <div class="col-md-5">
           <label class="form-label">Profesión</label>
-          <select name="profesion_id" class="form-select">
-            <option value="">— Sin especificar —</option>
+          <select name="profesion_id" id="sel-profesion" class="form-select">
+            <option value="" data-materia="">— Sin especificar —</option>
             @foreach($profesiones as $prof)
-              <option value="{{ $prof->id }}" {{ old('profesion_id', $docente->profesion_id) == $prof->id ? 'selected' : '' }}>
+              <option value="{{ $prof->id }}"
+                      data-materia="{{ $prof->materia_sigla }}"
+                      {{ old('profesion_id', $docente->profesion_id) == $prof->id ? 'selected' : '' }}>
                 {{ $prof->nombre }} {{ $prof->nivel_jerarquico ? "({$prof->nivel_jerarquico})" : '' }}
               </option>
             @endforeach
           </select>
         </div>
 
-        {{-- ▼ CAMPO NUEVO: Materia que dicta --}}
         <div class="col-md-4">
           <label class="form-label fw-semibold">
-            Materia que dicta <span class="text-danger">*</span>
+            Materias que dicta <span class="text-danger">*</span>
           </label>
-          <select name="materia" class="form-select @error('materia') is-invalid @enderror" required>
-            <option value="">— Seleccionar materia —</option>
+          <div id="materias-container" class="border rounded p-2 @error('materias') border-danger @enderror">
             @foreach($materias as $mat)
-              <option value="{{ $mat->sigla }}"
-                      {{ old('materia', $docente->materia) === $mat->sigla ? 'selected' : '' }}>
-                {{ $mat->sigla }} — {{ $mat->nombre }}
-              </option>
+              <div class="form-check materia-item" data-sigla="{{ $mat->sigla }}">
+                <input class="form-check-input" type="checkbox"
+                       name="materias[]"
+                       value="{{ $mat->sigla }}"
+                       id="mat_{{ $mat->sigla }}"
+                       {{ in_array($mat->sigla, $materiasActuales) ? 'checked' : '' }}>
+                <label class="form-check-label" for="mat_{{ $mat->sigla }}">
+                  <strong>{{ $mat->sigla }}</strong> — {{ $mat->nombre }}
+                </label>
+              </div>
             @endforeach
-          </select>
-          @error('materia')
-            <div class="invalid-feedback">{{ $message }}</div>
+          </div>
+          @error('materias')
+            <div class="text-danger small mt-1">{{ $message }}</div>
           @enderror
           <small class="text-muted">Determina qué grupos puede recibir este docente</small>
         </div>
@@ -123,7 +137,7 @@
           @if($docente->certif_docente)
             <p class="text-muted small mb-1">
               <i class="bi bi-file-earmark-pdf me-1"></i>
-              <a href="{{ Storage::url($docente->certif_docente) }}" target="_blank">Ver archivo actual</a>
+              <a href="{{ asset('storage/' . $docente->certif_docente) }}" target="_blank">Ver archivo actual</a>
             </p>
           @endif
           <input type="file" name="certif_docente" class="form-control" accept=".pdf,.jpg,.jpeg,.png">
@@ -134,7 +148,7 @@
           @if($docente->certif_profesional)
             <p class="text-muted small mb-1">
               <i class="bi bi-file-earmark-pdf me-1"></i>
-              <a href="{{ Storage::url($docente->certif_profesional) }}" target="_blank">Ver archivo actual</a>
+              <a href="{{ asset('storage/' . $docente->certif_profesional) }}" target="_blank">Ver archivo actual</a>
             </p>
           @endif
           <input type="file" name="certif_profesional" class="form-control" accept=".pdf,.jpg,.jpeg,.png">
@@ -152,5 +166,39 @@
     </form>
   </div>
 </div>
+
+<script>
+(function () {
+  const materiasPermitidas = {
+    'MAT': ['MAT', 'COM'],           // Matemáticas puede dictar Mat y Computación
+    'FIS': ['FIS', 'MAT'],           // Física puede dictar Fis y Matemáticas
+    'COM': ['COM'],                  // Computación solo Computación
+    'ING': ['ING'],                  // Inglés solo Inglés
+    'TEC': ['FIS', 'MAT', 'COM'],    // Telecomunicaciones puede dictar Fis, Mat y Comp
+  };
+
+  const selProfesion = document.getElementById('sel-profesion');
+  if (!selProfesion) return;
+
+  function filtrarMaterias() {
+    const opt = selProfesion.options[selProfesion.selectedIndex];
+    const sigla = opt ? opt.dataset.materia : '';
+    const permitidas = sigla ? (materiasPermitidas[sigla] || null) : null;
+
+    document.querySelectorAll('#materias-container .materia-item').forEach(function (item) {
+      const itemSigla = item.dataset.sigla;
+      const visible = !permitidas || permitidas.includes(itemSigla);
+      item.style.display = visible ? '' : 'none';
+      if (!visible) {
+        const cb = item.querySelector('input[type=checkbox]');
+        if (cb) cb.checked = false;
+      }
+    });
+  }
+
+  selProfesion.addEventListener('change', filtrarMaterias);
+  filtrarMaterias(); // aplicar al cargar para respetar la profesión guardada
+})();
+</script>
 
 @endsection

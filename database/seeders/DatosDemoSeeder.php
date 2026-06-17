@@ -28,6 +28,9 @@ class DatosDemoSeeder extends Seeder
         $this->command->info('   ✓ '.count($carreraIds).' carreras encontradas');
 
 // ============= 3) MATERIAS (con días estructurados) =============
+        // Limpiar grupo_materias y grupos antes de borrar materias (FK constraint)
+        DB::table('grupo_materias')->delete();
+        DB::table('grupos')->delete();
         // Esquema real: sigla (no codigo), sin descripcion, dias NOT NULL.
         DB::table('materias')->delete();
         $materias = [

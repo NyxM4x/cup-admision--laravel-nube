@@ -12,7 +12,7 @@ class Docente extends Model
         'persona_id',
         'profesion_id',
         'profesion',
-        'materia',          // sigla de la materia que dicta (ej: 'MAT', 'FIS')
+        'materia',          // sigla principal (compat. con GrupoController)
         'anios_experiencia',
         'certif_docente',
         'certif_profesional',
@@ -35,20 +35,25 @@ class Docente extends Model
         return $this->belongsTo(Profesion::class);
     }
 
-    // ── Scope: filtrar por sigla de materia ──────────────────
+    public function docenteMaterias()
+    {
+        return $this->hasMany(DocenteMateria::class);
+    }
 
-    /**
-     * Scope para obtener docentes de una materia específica.
-     * Uso: Docente::deMateria('MAT')->get()
-     */
+    // ── Scopes ───────────────────────────────────────────────
+
+    /** Filtrar por sigla en el campo denormalizado (usado por GrupoController). */
     public function scopeDeMateria($query, string $sigla)
     {
         return $query->where('materia', $sigla);
     }
 
-    /**
-     * Scope activos.
-     */
+    /** Filtrar por sigla en la tabla docente_materias (múltiples materias). */
+    public function scopeDeMateriasMultiple($query, string $sigla)
+    {
+        return $query->whereHas('docenteMaterias', fn($q) => $q->where('materia_sigla', $sigla));
+    }
+
     public function scopeActivos($query)
     {
         return $query->where('activo', true);

@@ -10,28 +10,41 @@ class HorariosSeeder extends Seeder
     public function run(): void
     {
         $horarios = [
-            ['M1', 'Mañana', 'Lunes,Miércoles,Viernes', '08:00:00', '10:00:00', 'Mañana temprana - LMV'],
-            ['M2', 'Mañana', 'Martes,Jueves',           '10:00:00', '12:00:00', 'Mañana - MJ'],
-            ['T1', 'Tarde',  'Lunes,Miércoles,Viernes', '14:00:00', '16:00:00', 'Tarde temprana - LMV'],
-            ['T2', 'Tarde',  'Martes,Jueves',           '16:00:00', '18:00:00', 'Tarde - MJ'],
-            ['N1', 'Noche',  'Lunes,Miércoles,Viernes', '19:00:00', '21:00:00', 'Noche - LMV'],
-            ['N2', 'Noche',  'Martes,Jueves',           '19:00:00', '21:00:00', 'Noche - MJ'],
+            [
+                'codigo'      => 'G-MAÑANA-1',
+                'turno'       => 'Mañana',
+                'dias'        => 'Lunes,Martes,Miércoles,Jueves,Viernes',
+                'hora_inicio' => '07:00:00',
+                'hora_fin'    => '12:00:00',
+                'descripcion' => 'Turno mañana completo',
+            ],
+            [
+                'codigo'      => 'G-TARDE-1',
+                'turno'       => 'Tarde',
+                'dias'        => 'Lunes,Martes,Miércoles,Jueves,Viernes',
+                'hora_inicio' => '13:00:00',
+                'hora_fin'    => '18:00:00',
+                'descripcion' => 'Turno tarde completo',
+            ],
         ];
 
-        foreach ($horarios as [$cod, $turno, $dias, $ini, $fin, $desc]) {
+        foreach ($horarios as $h) {
             Horario::updateOrCreate(
-                ['codigo' => $cod],
+                ['codigo' => $h['codigo']],
                 [
-                    'turno'       => $turno,
-                    'dias'        => $dias,
-                    'hora_inicio' => $ini,
-                    'hora_fin'    => $fin,
-                    'descripcion' => $desc,
+                    'turno'       => $h['turno'],
+                    'dias'        => $h['dias'],
+                    'hora_inicio' => $h['hora_inicio'],
+                    'hora_fin'    => $h['hora_fin'],
+                    'descripcion' => $h['descripcion'],
                     'activo'      => true,
                 ]
             );
         }
 
-        $this->command->info('   ✓ 6 horarios fijos (M1/M2/T1/T2/N1/N2)');
+        // Eliminar todos los horarios que no sean los 2 fijos
+        Horario::whereNotIn('codigo', ['G-MAÑANA-1', 'G-TARDE-1'])->delete();
+
+        $this->command->info('   ✓ 2 horarios fijos (G-MAÑANA-1 / G-TARDE-1)');
     }
 }

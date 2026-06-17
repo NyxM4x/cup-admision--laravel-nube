@@ -41,7 +41,7 @@
   </div>
   <div class="col-12">
     <div class="panel-cup"><div class="panel-cup-body">
-      <strong><i class="bi bi-bar-chart-line me-1"></i> Promedio por materia <span class="text-muted small">(demo — depende de notas CU21-23)</span></strong>
+      <strong><i class="bi bi-bar-chart-line me-1"></i> Promedio por materia</strong>
       <canvas id="chartMateria" height="90"></canvas>
     </div></div>
   </div>
